@@ -1712,9 +1712,13 @@ textarea {
 
 .film-detail {
     display: grid;
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 1fr;
     gap: 1.5rem;
     align-items: start;
+}
+
+.film-detail--with-poster {
+    grid-template-columns: 200px 1fr;
 }
 
 .film-poster--large {
@@ -1750,7 +1754,7 @@ textarea {
 }
 
 @media (max-width: 600px) {
-    .film-detail {
+    .film-detail--with-poster {
         grid-template-columns: 1fr;
     }
 

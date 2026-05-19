@@ -1,8 +1,8 @@
-# Migrations historiques (My Webapp / dev mono-utilisateur)
+# Migrations historiques
 
-Ces fichiers **ne sont plus exécutés** par le paquet YunoHost.
+Ces fichiers **ne sont plus exécutés** par l’application.
 
-- Ils documentent l’évolution de l’ancienne application (`Moncine (origine)`).
-- Une **install fraîche** du paquet utilise uniquement `sql/schema.sql` + `sql/migrations/001_…`.
+- Ils documentent l’évolution antérieure du schéma (mono-utilisateur, anciennes étapes dev).
+- Une **install fraîche** utilise uniquement `sql/schema.sql` + `sql/migrations/001_…`.
 
-Pour récupérer des données : export CSV depuis l’ancienne instance, puis import dans le paquet (voir `doc/migration-export-import.md`).
+Pour importer des données : page **Import** de l’application (`/import.php`) ou export CSV depuis une instance existante.

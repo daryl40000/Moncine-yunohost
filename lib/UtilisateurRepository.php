@@ -123,7 +123,7 @@ final class UtilisateurRepository
      */
     public function createFirstAdmin(string $nom, string $email, string $plainPassword): int|string
     {
-        $this->db->exec('BEGIN IMMEDIATE');
+        $this->db->beginTransaction();
         try {
             if ($this->countWithPassword() > 0) {
                 $this->db->rollBack();
@@ -141,7 +141,9 @@ final class UtilisateurRepository
 
             return $result;
         } catch (\Throwable $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
 
             return 'Création du compte impossible.';
         }

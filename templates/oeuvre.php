@@ -32,8 +32,8 @@
             <?php endif; ?>
         </p>
 
-        <article class="film-detail">
-            <?php $posterSrc = Moncine\View::posterSrc($oeuvre['poster_url'] ?? null); ?>
+        <?php $posterSrc = Moncine\View::posterSrc($oeuvre['poster_url'] ?? null); ?>
+        <article class="film-detail<?= $posterSrc !== '' ? ' film-detail--with-poster' : '' ?>">
             <?php if ($posterSrc !== ''): ?>
                 <img class="film-poster film-poster--large" src="<?= $posterSrc ?>"
                      alt="Affiche de <?= Moncine\View::escape((string) ($oeuvre['titre'] ?? '')) ?>">

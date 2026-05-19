@@ -485,12 +485,12 @@ textarea {
 }
 
 @media (min-width: 640px) {
-    .film-detail {
+    .film-detail--with-poster {
         grid-template-columns: minmax(140px, 200px) 1fr;
         gap: 1.25rem 1.5rem;
     }
 
-    .film-poster--large {
+    .film-detail--with-poster .film-poster--large {
         margin: 0;
         max-width: 200px;
     }

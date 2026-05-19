@@ -1,8 +1,6 @@
 <?php
 /**
- * Configuration Moncine — édition paquet YunoHost (développement).
- *
- * Production figée (export uniquement) : ../Moncine (origine)/
+ * Configuration Moncine — application upstream.
  *
  * Structure :
  *   www/     racine web
@@ -18,7 +16,7 @@ define('MONCINE_ROOT', dirname(__DIR__));
 // Dossier web (www) — utile pour les liens et includes de templates
 define('MONCINE_WWW', MONCINE_ROOT . '/www');
 
-// Données : sur YunoHost, MONCINE_DATA_PATH pointe vers /home/yunohost.app/moncine/ (voir extra_php-fpm.conf).
+// Données : MONCINE_DATA_PATH peut pointer vers un dossier hors dépôt (serveur, conteneur…).
 $dataPath = getenv('MONCINE_DATA_PATH');
 if ($dataPath === false || $dataPath === '') {
     $dataPath = MONCINE_ROOT . '/data';
@@ -34,12 +32,12 @@ define('MONCINE_INSTALL_SEED_DATA_DIR', MONCINE_DATA . '/install_seed');
 // Nom de l'application (affiché dans les pages)
 define('MONCINE_APP_NAME', 'Moncine');
 
-// Version affichée / paquet (semver)
-define('MONCINE_PACKAGE_VERSION', '2.1.0-dev');
+// Version applicative (semver) — v0.5 ≈ 50 % de la vision cible (voir ROADMAP.md)
+define('MONCINE_PACKAGE_VERSION', '0.5.0');
 
 // Repère affiché sur la page import (vérifier que le serveur a bien le dernier code).
 define('MONCINE_IMPORT_ENGINE_BUILD', '2026-05-18-library-oeuvre-first');
-define('MONCINE_PACKAGE_EDITION', 'yunohost');
+define('MONCINE_PACKAGE_EDITION', 'app');
 
 // Encodage CSV attendu à l'import (UTF-8 recommandé)
 define('MONCINE_CSV_DELIMITER', ';');

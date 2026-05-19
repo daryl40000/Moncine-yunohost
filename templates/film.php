@@ -66,8 +66,8 @@
             <p class="hint film-wishlist-badge">Ce film est dans vos envies (pas encore dans vos films).</p>
         <?php endif; ?>
 
-        <article class="film-detail">
-            <?php $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null); ?>
+        <?php $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null); ?>
+        <article class="film-detail<?= $posterSrc !== '' ? ' film-detail--with-poster' : '' ?>">
             <?php if ($posterSrc !== ''): ?>
                 <img class="film-poster film-poster--large" src="<?= $posterSrc ?>"
                      alt="Affiche de <?= Moncine\View::escape($film['titre']) ?>">
