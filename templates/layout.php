@@ -1,5 +1,7 @@
 <?php
 /** @var string $templateFile Fichier de contenu injecté par View::render */
+$isAdminCatalog = Moncine\CatalogAdmin::canAccess();
+$currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -30,27 +32,42 @@
                 <span class="nav-toggle__bar" aria-hidden="true"></span>
             </button>
             <nav class="site-nav" id="site-nav" aria-label="Navigation principale">
-                <?php
-                // Menu : nom cliquable → Mon compte ; liens admin seulement pour les administrateurs.
-                $authUser = Moncine\Auth::currentUser();
-                if ($authUser !== null):
+                <a href="/"<?= $currentPath === '/' ? ' aria-current="page"' : '' ?>>Accueil</a>
+                <a href="/quiz.php"<?= $currentPath === '/quiz.php' ? ' aria-current="page"' : '' ?>>Ce soir</a>
+                <a href="/films.php"<?= $currentPath === '/films.php' ? ' aria-current="page"' : '' ?>>Mes films</a>
+                <a href="/souhaits.php"<?= $currentPath === '/souhaits.php' ? ' aria-current="page"' : '' ?>>Mes envies</a>
+                <a href="/statistiques.php"<?= $currentPath === '/statistiques.php' ? ' aria-current="page"' : '' ?>>Statistiques</a>
+                <?php if (!$isAdminCatalog): ?>
+                    <a href="/import.php"<?= $currentPath === '/import.php' ? ' aria-current="page"' : '' ?>>Importer</a>
+                <?php endif; ?>
+
+                <a href="/parametres.php" class="site-nav__settings"<?= $currentPath === '/parametres.php' ? ' aria-current="page"' : '' ?>>
+                    Paramètres
+                </a>
+
+                <?php if ($isAdminCatalog): ?>
+                    <?php
+                    $gestionPaths = [
+                        '/import.php',
+                        '/catalogue.php',
+                        '/maintenance-catalogue.php',
+                        '/foyers.php',
+                        '/utilisateurs.php',
+                    ];
+                    $gestionOpen = in_array($currentPath, $gestionPaths, true);
                     ?>
-                    <a href="/mon-compte.php" class="site-nav__user hint" title="Mon compte">
-                        <?= Moncine\View::escape((string) ($authUser['nom'] ?? '')) ?>
-                    </a>
+                    <details class="site-nav__menu site-nav__menu--gestion"<?= $gestionOpen ? ' open' : '' ?>>
+                        <summary class="site-nav__menu-summary site-nav__admin">Gestion</summary>
+                        <div class="site-nav__submenu" role="group" aria-label="Gestion administrateur">
+                            <a href="/import.php" class="site-nav__admin"<?= $currentPath === '/import.php' ? ' aria-current="page"' : '' ?>>Importer</a>
+                            <a href="/catalogue.php" class="site-nav__admin"<?= $currentPath === '/catalogue.php' ? ' aria-current="page"' : '' ?>>Catalogue</a>
+                            <a href="/maintenance-catalogue.php" class="site-nav__admin"<?= $currentPath === '/maintenance-catalogue.php' ? ' aria-current="page"' : '' ?>>Maintenance</a>
+                            <a href="/foyers.php" class="site-nav__admin"<?= $currentPath === '/foyers.php' ? ' aria-current="page"' : '' ?>>Foyers</a>
+                            <a href="/utilisateurs.php" class="site-nav__admin"<?= $currentPath === '/utilisateurs.php' ? ' aria-current="page"' : '' ?>>Comptes</a>
+                        </div>
+                    </details>
                 <?php endif; ?>
-                <a href="/">Accueil</a>
-                <a href="/quiz.php">Ce soir</a>
-                <a href="/films.php">Mes films</a>
-                <a href="/souhaits.php">Mes envies</a>
-                <a href="/statistiques.php">Statistiques</a>
-                <a href="/import.php">Importer</a>
-                <?php if (Moncine\CatalogAdmin::canAccess()): ?>
-                    <a href="/catalogue.php" class="site-nav__admin">Catalogue</a>
-                    <a href="/maintenance-catalogue.php" class="site-nav__admin">Maintenance</a>
-                    <a href="/foyers.php" class="site-nav__admin">Foyers</a>
-                    <a href="/utilisateurs.php" class="site-nav__admin">Comptes</a>
-                <?php endif; ?>
+
                 <?php /* POST + jeton CSRF : évite une déconnexion forcée par un simple lien */ ?>
                 <form method="post" action="/deconnexion.php" class="inline-form site-nav__logout-form">
                     <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>

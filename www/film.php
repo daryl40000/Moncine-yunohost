@@ -7,8 +7,10 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
+use Moncine\FilmListContext;
 use Moncine\FilmRepository;
 use Moncine\HistoriqueRepository;
+use Moncine\LibraryStatut;
 use Moncine\TmdbConfig;
 use Moncine\UserContext;
 use Moncine\View;
@@ -56,6 +58,12 @@ if (isset($_GET['enrich'])) {
 $saveError = (string) ($_GET['save_error'] ?? '');
 $editOpen = isset($_GET['edit']) || $saveError !== '';
 
+$defaultList = ($film['statut'] ?? '') === LibraryStatut::WISHLIST
+    ? FilmListContext::WISHLIST
+    : FilmListContext::COLLECTION;
+$filmListContext = FilmListContext::fromQuery($_GET, $defaultList);
+$filmNav = $repo->getFilmNavigation($id, $filmListContext);
+
 View::render('film', [
     'pageTitle' => (string) $film['titre'],
     'film' => $film,
@@ -78,4 +86,7 @@ View::render('film', [
     'sagaSuggestions' => $repo->distinctSagas(),
     'canManageCatalog' => UserContext::canManageCatalog(),
     'showTmdbEnrich' => UserContext::canManageCatalog(),
+    'filmListContext' => $filmListContext,
+    'filmNav' => $filmNav,
+    'listBackUrl' => $filmListContext->backUrl(),
 ]);

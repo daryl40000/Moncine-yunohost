@@ -17,7 +17,7 @@ final class UtilisateurRepository
   /** Limite pour éviter les abus (charge CPU du hachage). */
     public const MAX_PASSWORD_LENGTH = 128;
 
-    private const PUBLIC_COLUMNS = 'id, nom, email, role, actif, foyer_id, last_login_at, created_at';
+    private const PUBLIC_COLUMNS = 'id, nom, prenom, pseudo, email, role, actif, foyer_id, last_login_at, created_at';
 
     private PDO $db;
 
@@ -83,7 +83,7 @@ final class UtilisateurRepository
     public function listAll(): array
     {
         return $this->db->query(
-            'SELECT u.id, u.nom, u.email, u.role, u.actif, u.foyer_id, u.last_login_at, u.created_at,
+            'SELECT u.id, u.nom, u.prenom, u.pseudo, u.email, u.role, u.actif, u.foyer_id, u.last_login_at, u.created_at,
                     f.nom AS foyer_nom
              FROM utilisateurs u
              LEFT JOIN foyers f ON f.id = u.foyer_id
@@ -91,14 +91,24 @@ final class UtilisateurRepository
         )->fetchAll();
     }
 
-    public function create(string $nom, string $email, string $plainPassword, string $role, int $foyerId = 0): int|string
-    {
+    public function create(
+        string $nom,
+        string $email,
+        string $plainPassword,
+        string $role,
+        int $foyerId = 0,
+        string $prenom = '',
+        string $pseudo = ''
+    ): int|string {
         $nom = trim($nom);
+        $prenom = trim($prenom);
+        $pseudo = UserProfile::sanitizePseudo($pseudo);
         $email = mb_strtolower(trim($email), 'UTF-8');
         $role = UserRole::normalize($role);
 
-        if ($nom === '') {
-            return 'Le nom est obligatoire.';
+        $identity = UserProfile::validateIdentityFields($nom, $prenom, $pseudo);
+        if ($identity !== true) {
+            return $identity;
         }
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return 'Adresse e-mail invalide.';
@@ -121,9 +131,17 @@ final class UtilisateurRepository
         }
 
         $this->db->prepare(
-            'INSERT INTO utilisateurs (nom, email, password_hash, role, actif, foyer_id, created_at)
-             VALUES (?, ?, ?, ?, 1, ?, datetime(\'now\'))'
-        )->execute([$nom, $email, $hash, $role, $foyerId > 0 ? $foyerId : null]);
+            'INSERT INTO utilisateurs (nom, prenom, pseudo, email, password_hash, role, actif, foyer_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, 1, ?, datetime(\'now\'))'
+        )->execute([
+            $nom,
+            $prenom,
+            $pseudo,
+            $email,
+            $hash,
+            $role,
+            $foyerId > 0 ? $foyerId : null,
+        ]);
 
         return (int) $this->db->lastInsertId();
     }
@@ -339,17 +357,27 @@ final class UtilisateurRepository
     /**
      * @return true|string
      */
-    public function updateProfile(int $id, string $nom, string $email): bool|string
-    {
+    public function updateProfile(
+        int $id,
+        string $nom,
+        string $prenom,
+        string $email,
+        string $pseudo = ''
+    ): bool|string {
         $nom = trim($nom);
+        $prenom = trim($prenom);
+        $pseudo = UserProfile::sanitizePseudo($pseudo);
         $email = mb_strtolower(trim($email), 'UTF-8');
 
         if ($id <= 0) {
             return 'Compte invalide.';
         }
-        if ($nom === '') {
-            return 'Le nom est obligatoire.';
+
+        $identity = UserProfile::validateIdentityFields($nom, $prenom, $pseudo);
+        if ($identity !== true) {
+            return $identity;
         }
+
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return 'Adresse e-mail invalide.';
         }
@@ -359,8 +387,10 @@ final class UtilisateurRepository
             return 'Cette adresse e-mail est déjà utilisée.';
         }
 
-        $stmt = $this->db->prepare('UPDATE utilisateurs SET nom = ?, email = ? WHERE id = ?');
-        $stmt->execute([$nom, $email, $id]);
+        $stmt = $this->db->prepare(
+            'UPDATE utilisateurs SET nom = ?, prenom = ?, pseudo = ?, email = ? WHERE id = ?'
+        );
+        $stmt->execute([$nom, $prenom, $pseudo, $email, $id]);
 
         return $stmt->rowCount() > 0 ? true : 'Compte introuvable.';
     }

@@ -54,7 +54,7 @@
         <?php endif; ?>
 
         <p class="breadcrumb">
-            <a href="<?= $isWishlist ? '/souhaits.php' : '/films.php' ?>">
+            <a href="<?= Moncine\View::escape($listBackUrl ?? ($isWishlist ? '/souhaits.php' : '/films.php')) ?>">
                 <?= $isWishlist
                     ? Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST))
                     : Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::COLLECTION)) ?>
@@ -62,12 +62,14 @@
             <span aria-hidden="true"> › </span>
             <span><?= Moncine\View::escape($film['titre']) ?></span>
         </p>
+
+        <?php require MONCINE_ROOT . '/templates/_film_list_nav.php'; ?>
         <?php if ($isWishlist): ?>
             <p class="hint film-wishlist-badge">Ce film est dans vos envies (pas encore dans vos films).</p>
         <?php endif; ?>
 
         <?php $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null); ?>
-        <article class="film-detail<?= $posterSrc !== '' ? ' film-detail--with-poster' : '' ?>">
+        <article id="film-detail" class="film-detail<?= $posterSrc !== '' ? ' film-detail--with-poster' : '' ?>">
             <?php if ($posterSrc !== ''): ?>
                 <img class="film-poster film-poster--large" src="<?= $posterSrc ?>"
                      alt="Affiche de <?= Moncine\View::escape($film['titre']) ?>">
@@ -265,6 +267,9 @@
                         <form method="post" action="/promouvoir-collection.php">
                             <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                             <input type="hidden" name="film_id" value="<?= $filmId ?>">
+                            <?php if (isset($filmListContext)): ?>
+                                <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
+                            <?php endif; ?>
                             <label for="promote_support">Support physique (optionnel)</label>
                             <select name="support_physique" id="promote_support">
                                 <option value="">— Plus tard —</option>
@@ -299,13 +304,19 @@
                           onsubmit="return confirm('Supprimer définitivement « <?= Moncine\View::escape($film['titre']) ?> » de vos films ?\n\nL’historique des visions sera aussi effacé.');">
                         <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                         <input type="hidden" name="film_id" value="<?= $filmId ?>">
+                        <?php if (isset($filmListContext)): ?>
+                            <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
+                        <?php endif; ?>
                         <button type="submit" class="btn btn-danger">Supprimer ce film</button>
                     </form>
                 </section>
 
+                <?php require MONCINE_ROOT . '/templates/_film_list_nav.php'; ?>
+
                 <div class="result-actions">
                     <a href="/quiz.php" class="btn btn-primary">Chercher un film ce soir</a>
-                    <a href="/films.php" class="btn btn-ghost">Retour à la liste</a>
+                    <a href="<?= Moncine\View::escape($listBackUrl ?? ($isWishlist ? '/souhaits.php' : '/films.php')) ?>"
+                       class="btn btn-ghost">Retour à la liste</a>
                 </div>
             </div>
         </article>

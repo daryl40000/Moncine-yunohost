@@ -8,7 +8,9 @@
  * @var string $query
  * @var string $kindFilter
  * @var string $viewMode
+ * @var Moncine\FilmListContext $filmListContext
  */
+$filmListContext = $filmListContext ?? Moncine\FilmListContext::forCollection($sortBy, $sortDir, $query, $kindFilter);
 $gridSortLink = static function (string $label, string $column) use ($sortBy, $sortDir, $query, $kindFilter, $viewMode): void {
     $active = $sortBy === $column;
     $class = 'collection-grid-sort__link' . ($active ? ' is-active' : '');
@@ -38,7 +40,7 @@ $gridSortLink = static function (string $label, string $column) use ($sortBy, $s
     <?php foreach ($films as $film):
         $filmId = (int) $film['id'];
         $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null);
-        $filmUrl = '/film.php?id=' . $filmId;
+        $filmUrl = $filmListContext->filmUrl($filmId);
         $annee = (int) ($film['annee'] ?? 0);
         $kindKey = \Moncine\ContentKindFilter::categoryKey($film);
         ?>

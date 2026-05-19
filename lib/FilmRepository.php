@@ -62,6 +62,79 @@ final class FilmRepository
         return [];
     }
 
+    /**
+     * Film précédent / suivant dans la même liste (tri et recherche que la page d’origine).
+     *
+     * @return array{
+     *   prev_id: int|null,
+     *   next_id: int|null,
+     *   position: int,
+     *   total: int,
+     *   in_list: bool
+     * }
+     */
+    public function getFilmNavigation(int $filmId, FilmListContext $context): array
+    {
+        if ($filmId <= 0) {
+            return [
+                'prev_id' => null,
+                'next_id' => null,
+                'position' => 0,
+                'total' => 0,
+                'in_list' => false,
+            ];
+        }
+
+        if ($context->isWishlist()) {
+            if (!$this->engine instanceof CatalogFilmRepository) {
+                return [
+                    'prev_id' => null,
+                    'next_id' => null,
+                    'position' => 0,
+                    'total' => 0,
+                    'in_list' => false,
+                ];
+            }
+            $films = $this->findAllWishlist(
+                $context->sortBy(),
+                $context->sortDir(),
+                $context->searchQuery()
+            );
+        } else {
+            $films = $this->findAll(
+                $context->sortBy(),
+                $context->sortDir(),
+                $context->searchQuery(),
+                $context->kindFilter()
+            );
+        }
+
+        $ids = [];
+        foreach ($films as $row) {
+            $ids[] = (int) ($row['id'] ?? 0);
+        }
+
+        $total = count($ids);
+        $index = array_search($filmId, $ids, true);
+        if ($index === false) {
+            return [
+                'prev_id' => null,
+                'next_id' => null,
+                'position' => 0,
+                'total' => $total,
+                'in_list' => false,
+            ];
+        }
+
+        return [
+            'prev_id' => $index > 0 ? $ids[$index - 1] : null,
+            'next_id' => $index < $total - 1 ? $ids[$index + 1] : null,
+            'position' => $index + 1,
+            'total' => $total,
+            'in_list' => true,
+        ];
+    }
+
     public function findAllForExport(): array
     {
         return $this->engine->findAllForExport();

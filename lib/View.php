@@ -45,6 +45,12 @@ final class View
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
+    /** Nom affiché pour un utilisateur connecté (pseudo ou prénom + nom). */
+    public static function userDisplayName(array $user): string
+    {
+        return UserProfile::displayName($user);
+    }
+
     /** Libellé affiché pour la catégorie d’une fiche (film, série, spectacle…). */
     public static function contentKindLabel(array $film): string
     {

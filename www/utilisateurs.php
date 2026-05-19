@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['email'] ?? ''),
             (string) ($_POST['password'] ?? ''),
             (string) ($_POST['role'] ?? UserRole::USER),
-            (int) ($_POST['foyer_id'] ?? 0)
+            (int) ($_POST['foyer_id'] ?? 0),
+            (string) ($_POST['prenom'] ?? ''),
+            (string) ($_POST['pseudo'] ?? '')
         );
         if (is_int($result)) {
             $success = 'Compte créé.';

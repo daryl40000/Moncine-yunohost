@@ -831,8 +831,208 @@ textarea {
     background: rgba(0, 210, 255, 0.06);
 }
 
+/* Barre de navigation discrète (fiches film, pagination catalogue) */
+.list-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.85rem;
+    margin: 0.35rem 0 0.85rem;
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.film-list-pager {
+    justify-content: center;
+}
+
+.film-detail__body > .film-list-pager {
+    margin-top: 1.25rem;
+}
+
+.catalog-list-pager {
+    justify-content: space-between;
+}
+
+.list-pager__group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+}
+
+.list-pager__status {
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.list-pager__status-meta {
+    opacity: 0.85;
+}
+
+.list-pager__link {
+    color: var(--accent, #7dd3fc);
+    text-decoration: none;
+    padding: 0.15rem 0;
+}
+
+.list-pager__link:hover,
+.list-pager__link:focus-visible {
+    text-decoration: underline;
+    color: var(--text);
+}
+
+.list-pager__link.is-disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.list-pager__sep {
+    opacity: 0.45;
+    user-select: none;
+}
+
+.list-pager__goto {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.45rem;
+    margin: 0;
+    margin-left: auto;
+}
+
+.list-pager__goto-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.list-pager__goto-input {
+    width: 3.25rem;
+    min-height: 1.85rem;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.list-pager__goto-btn {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--accent, #7dd3fc);
+    background: none;
+    border: none;
+    padding: 0.15rem 0.35rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.list-pager__goto-btn:hover,
+.list-pager__goto-btn:focus-visible {
+    color: var(--text);
+}
+
+#film-detail,
+#catalogue-list {
+    scroll-margin-top: 5.5rem;
+}
+
 .site-nav__admin {
     color: #7dd3fc;
+}
+
+.site-nav__settings {
+    color: var(--text);
+}
+
+.site-nav__menu {
+    position: relative;
+    margin: 0;
+}
+
+.site-nav__menu-summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: inherit;
+    font-family: inherit;
+    padding: 0.65rem 0.5rem;
+    border-radius: 6px;
+    min-height: var(--touch-min, 44px);
+    display: flex;
+    align-items: center;
+    user-select: none;
+}
+
+.site-nav__menu-summary::-webkit-details-marker {
+    display: none;
+}
+
+.site-nav__menu-summary::after {
+    content: " ▾";
+    font-size: 0.75em;
+    opacity: 0.75;
+}
+
+.site-nav__menu[open] .site-nav__menu-summary::after {
+    content: " ▴";
+}
+
+.site-nav__menu-summary:hover,
+.site-nav__menu-summary:focus-visible {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.site-nav__submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin: 0 0 0.35rem;
+    padding: 0.25rem 0 0.35rem 0.75rem;
+    border-left: 2px solid var(--border);
+}
+
+.site-nav__submenu a {
+    margin: 0;
+    padding: 0.5rem 0.5rem;
+    font-size: 0.95rem;
+}
+
+@media (min-width: 900px) {
+    .site-nav__menu-summary {
+        padding: 0.4rem 0.65rem;
+        min-height: auto;
+        white-space: nowrap;
+    }
+
+    .site-nav__submenu {
+        position: absolute;
+        top: calc(100% + 0.2rem);
+        right: 0;
+        z-index: 200;
+        min-width: 11rem;
+        margin: 0;
+        padding: 0.35rem 0;
+        border: 1px solid var(--border);
+        border-left: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .site-nav__submenu a {
+        padding: 0.45rem 0.85rem;
+        border-radius: 0;
+    }
+
+    .site-nav__submenu a:hover,
+    .site-nav__submenu a:focus-visible {
+        background: rgba(255, 255, 255, 0.06);
+    }
 }
 
 .catalog-admin-panel {
@@ -898,11 +1098,15 @@ textarea {
     margin: 0 0 0.5rem;
 }
 
-.catalog-admin-pagination {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
+@media (max-width: 899px) {
+    .catalog-list-pager {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .list-pager__goto {
+        margin-left: 0;
+    }
 }
 
 .visually-hidden {

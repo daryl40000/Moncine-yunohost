@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS foyers (
 CREATE TABLE IF NOT EXISTS utilisateurs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nom TEXT NOT NULL DEFAULT '',
+    prenom TEXT NOT NULL DEFAULT '',
+    pseudo TEXT NOT NULL DEFAULT '',
     email TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL DEFAULT '',
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),

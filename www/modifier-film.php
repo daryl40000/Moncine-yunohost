@@ -8,8 +8,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Csrf;
+use Moncine\FilmListContext;
 use Moncine\FilmManualEdit;
 use Moncine\FilmRepository;
+use Moncine\LibraryStatut;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /films.php');
@@ -22,27 +24,32 @@ if ($filmId <= 0) {
     exit;
 }
 
-Csrf::rejectUnlessValid($_POST, '/film.php?id=' . $filmId . '&edit=1');
+$film = (new FilmRepository())->findById($filmId);
+$defaultList = ($film['statut'] ?? '') === LibraryStatut::WISHLIST
+    ? FilmListContext::WISHLIST
+    : FilmListContext::COLLECTION;
+$listContext = FilmListContext::fromPost($_POST, $defaultList);
+$filmBaseUrl = $listContext->filmUrl($filmId);
+
+Csrf::rejectUnlessValid($_POST, $filmBaseUrl . '&edit=1');
 
 $parsed = FilmManualEdit::parseExemplaireFromPost($_POST);
 if (!$parsed['ok']) {
-    $params = http_build_query([
+    header('Location: ' . $listContext->filmUrlWithQuery($filmId, [
         'save_error' => $parsed['error'],
         'edit' => '1',
-    ]);
-    header('Location: /film.php?id=' . $filmId . '&' . $params);
+    ]));
     exit;
 }
 
 $result = (new FilmRepository())->updateManual($filmId, $parsed['data']);
 if ($result !== true) {
-    $params = http_build_query([
+    header('Location: ' . $listContext->filmUrlWithQuery($filmId, [
         'save_error' => (string) $result,
         'edit' => '1',
-    ]);
-    header('Location: /film.php?id=' . $filmId . '&' . $params);
+    ]));
     exit;
 }
 
-header('Location: /film.php?id=' . $filmId . '&saved=1');
+header('Location: ' . $listContext->filmUrlWithQuery($filmId, ['saved' => '1']));
 exit;

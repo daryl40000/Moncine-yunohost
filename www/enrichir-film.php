@@ -10,6 +10,9 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 use Moncine\CatalogAdmin;
 use Moncine\Csrf;
 use Moncine\FilmEnricher;
+use Moncine\FilmListContext;
+use Moncine\FilmRepository;
+use Moncine\LibraryStatut;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /films.php');
@@ -27,9 +30,14 @@ if ($filmId <= 0) {
 }
 
 $return = (string) ($_POST['return'] ?? 'film');
+$film = (new FilmRepository())->findById($filmId);
+$defaultList = ($film['statut'] ?? '') === LibraryStatut::WISHLIST
+    ? FilmListContext::WISHLIST
+    : FilmListContext::COLLECTION;
+$listContext = FilmListContext::fromPost($_POST, $defaultList);
 $failUrl = $return === 'resultat'
     ? '/resultat.php?film_id=' . $filmId
-    : '/film.php?id=' . $filmId;
+    : $listContext->filmUrl($filmId);
 Csrf::rejectUnlessValid($_POST, $failUrl);
 
 $enricher = new FilmEnricher();
@@ -51,5 +59,8 @@ if ($return === 'resultat') {
     exit;
 }
 
-header('Location: /film.php?id=' . $filmId . '&' . $params);
+header('Location: ' . $listContext->filmUrlWithQuery($filmId, [
+    'enrich' => $status,
+    'enrich_msg' => $result['message'],
+]));
 exit;

@@ -8,7 +8,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Csrf;
+use Moncine\FilmListContext;
+use Moncine\FilmRepository;
 use Moncine\HistoriqueRepository;
+use Moncine\LibraryStatut;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /');
@@ -25,9 +28,16 @@ if ($filmId <= 0) {
     exit;
 }
 
-$redirectError = static function (string $message) use ($return, $filmId): void {
+$film = (new FilmRepository())->findById($filmId);
+$defaultList = $film !== null && ($film['statut'] ?? '') === LibraryStatut::WISHLIST
+    ? FilmListContext::WISHLIST
+    : FilmListContext::COLLECTION;
+$listContext = FilmListContext::fromPost($_POST, $defaultList);
+$redirectError = static function (string $message) use ($return, $filmId, $listContext): void {
     if ($return === 'film') {
-        header('Location: /film.php?id=' . $filmId . '&vu_error=' . rawurlencode($message));
+        header('Location: ' . $listContext->filmUrlWithQuery($filmId, [
+            'vu_error' => $message,
+        ]));
         exit;
     }
     if ($return === 'resultat') {
@@ -75,7 +85,7 @@ if ($parsedNote['note'] !== null) {
 }
 
 if ($return === 'film') {
-    header('Location: /film.php?id=' . $filmId . '&' . http_build_query($params));
+    header('Location: ' . $listContext->filmUrlWithQuery($filmId, $params));
     exit;
 }
 

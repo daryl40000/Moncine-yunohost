@@ -13,7 +13,7 @@ use Moncine\PasswordResetRepository;
 use Moncine\View;
 
 if (Auth::isLoggedIn()) {
-    header('Location: /mon-compte.php');
+    header('Location: /parametres.php');
     exit;
 }
 

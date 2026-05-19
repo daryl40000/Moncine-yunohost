@@ -42,6 +42,9 @@ $oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
     <form method="post" action="/modifier-film.php" class="film-edit-form">
         <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
         <input type="hidden" name="film_id" value="<?= (int) $filmId ?>">
+        <?php if (isset($filmListContext)): ?>
+            <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
+        <?php endif; ?>
         <input type="hidden" name="content_kind" value="<?= Moncine\View::escape(
             Moncine\MoncineContentKind::toFormValue(
                 $moncineKind,

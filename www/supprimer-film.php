@@ -8,7 +8,9 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Csrf;
+use Moncine\FilmListContext;
 use Moncine\FilmRepository;
+use Moncine\LibraryStatut;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /films.php');
@@ -21,10 +23,16 @@ if ($filmId <= 0) {
     exit;
 }
 
-Csrf::rejectUnlessValid($_POST, '/film.php?id=' . $filmId);
-
 $repo = new FilmRepository();
 $film = $repo->findById($filmId);
+$defaultList = ($film['statut'] ?? '') === LibraryStatut::WISHLIST
+    ? FilmListContext::WISHLIST
+    : FilmListContext::COLLECTION;
+$listContext = FilmListContext::fromPost($_POST, $defaultList);
+$filmUrl = $filmId > 0 ? $listContext->filmUrl($filmId) : $listContext->backUrl();
+
+Csrf::rejectUnlessValid($_POST, $filmUrl);
+
 if ($film === null) {
     header('Location: /films.php?bulk_error=' . rawurlencode('Film introuvable ou déjà supprimé.'));
     exit;
@@ -32,9 +40,13 @@ if ($film === null) {
 
 $titre = (string) ($film['titre']);
 if (!$repo->deleteById($filmId)) {
-    header('Location: /film.php?id=' . $filmId . '&delete_error=' . rawurlencode('Impossible de supprimer ce film.'));
+    header('Location: ' . $listContext->filmUrlWithQuery($filmId, [
+        'delete_error' => 'Impossible de supprimer ce film.',
+    ]));
     exit;
 }
 
-header('Location: /films.php?deleted=1&deleted_title=' . rawurlencode($titre));
+$back = $listContext->backUrl();
+$sep = str_contains($back, '?') ? '&' : '?';
+header('Location: ' . $back . $sep . 'deleted=1&deleted_title=' . rawurlencode($titre));
 exit;

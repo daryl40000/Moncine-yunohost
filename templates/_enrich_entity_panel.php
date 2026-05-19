@@ -71,6 +71,8 @@ $tmdbPublicUrl = $currentTmdbId > 0
                 <input type="hidden" name="catalog_sort" value="<?= Moncine\View::escape($catalogSort) ?>">
                 <input type="hidden" name="catalog_dir" value="<?= Moncine\View::escape($catalogDir) ?>">
                 <input type="hidden" name="catalog_page" value="<?= $catalogPage ?>">
+            <?php elseif ($returnPage === 'film' && isset($filmListContext)): ?>
+                <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
             <?php endif; ?>
             <input type="hidden" name="action" value="enrich">
             <button type="submit" class="btn btn-accent">Enrichir par le titre</button>
@@ -97,6 +99,8 @@ $tmdbPublicUrl = $currentTmdbId > 0
                     <input type="hidden" name="catalog_sort" value="<?= Moncine\View::escape($catalogSort) ?>">
                     <input type="hidden" name="catalog_dir" value="<?= Moncine\View::escape($catalogDir) ?>">
                     <input type="hidden" name="catalog_page" value="<?= $catalogPage ?>">
+                <?php elseif ($returnPage === 'film' && isset($filmListContext)): ?>
+                    <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
                 <?php endif; ?>
                 <input type="hidden" name="action" value="tmdb">
                 <label for="tmdb_id_<?= $entityId ?>_<?= Moncine\View::escape($enrichTarget) ?>">Identifiant TMDB</label>

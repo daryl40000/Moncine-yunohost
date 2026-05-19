@@ -26,6 +26,8 @@ $sagaNameFlash = trim((string) ($_GET['saga_name'] ?? ''));
 $deletedFlash = isset($_GET['deleted']) && (string) $_GET['deleted'] === '1';
 $deletedTitle = trim((string) ($_GET['deleted_title'] ?? ''));
 
+$filmListContext = Moncine\FilmListContext::forCollection($sortBy, $sortDir, $query, $kindFilter);
+
 $sortHeader = static function (string $label, string $column) use ($sortBy, $sortDir, $query, $kindFilter, $viewMode): void {
     $active = $sortBy === $column;
     $aria = $active

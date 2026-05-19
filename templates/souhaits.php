@@ -7,6 +7,7 @@
 /** @var int $totalCount */
 
 $query = $query ?? '';
+$filmListContext = Moncine\FilmListContext::forWishlist($sortBy, $sortDir, $query);
 $searched = $searched ?? false;
 $totalCount = (int) ($totalCount ?? count($films));
 $resultCount = count($films);
@@ -97,7 +98,7 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                     ?>
                     <tr>
                         <td>
-                            <a href="/film.php?id=<?= $filmId ?>" class="film-link">
+                            <a href="<?= Moncine\View::escape($filmListContext->filmUrl($filmId)) ?>" class="film-link">
                                 <?= Moncine\View::escape($film['titre']) ?>
                             </a>
                         </td>

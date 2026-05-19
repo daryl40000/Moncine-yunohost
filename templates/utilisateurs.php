@@ -27,8 +27,14 @@
             <form method="post" action="/utilisateurs.php" class="import-form auth-form">
                 <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                 <input type="hidden" name="action" value="create">
+                <label for="new_prenom">Prénom</label>
+                <input type="text" name="prenom" id="new_prenom" autocomplete="given-name">
                 <label for="new_nom">Nom</label>
-                <input type="text" name="nom" id="new_nom" required>
+                <input type="text" name="nom" id="new_nom" autocomplete="family-name">
+                <label for="new_pseudo">Pseudo</label>
+                <input type="text" name="pseudo" id="new_pseudo" autocomplete="nickname"
+                       maxlength="<?= Moncine\UserProfile::MAX_PSEUDO_LENGTH ?>"
+                       placeholder="Optionnel">
                 <label for="new_email">E-mail</label>
                 <input type="email" name="email" id="new_email" required>
                 <label for="new_password">Mot de passe provisoire</label>
@@ -78,7 +84,7 @@
                     $userFoyerId = (int) ($user['foyer_id'] ?? 0);
                     ?>
                     <tr>
-                        <td><?= Moncine\View::escape((string) ($user['nom'] ?? '')) ?></td>
+                        <td><?= Moncine\View::escape(Moncine\View::userDisplayName($user)) ?></td>
                         <td><?= Moncine\View::escape((string) ($user['email'] ?? '')) ?></td>
                         <td>
                             <form method="post" action="/utilisateurs.php" class="inline-form">

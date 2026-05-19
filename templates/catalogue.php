@@ -35,18 +35,6 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
     <?php
 };
 
-$pageUrl = static function (int $targetPage) use ($search, $sortBy, $sortDir): string {
-    $params = [
-        'page' => max(1, $targetPage),
-        'sort' => $sortBy,
-        'dir' => $sortDir,
-    ];
-    if (trim($search) !== '') {
-        $params['q'] = $search;
-    }
-
-    return '/catalogue.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-};
 ?>
 <section class="catalog-admin-page">
     <div class="catalog-admin-page__head">
@@ -194,11 +182,15 @@ $pageUrl = static function (int $targetPage) use ($search, $sortBy, $sortDir): s
                 <?php if ($search !== ''): ?>
                     pour « <strong><?= Moncine\View::escape($search) ?></strong> »
                 <?php endif; ?>
-                — page <?= $page ?> / <?= $totalPages ?>
             </p>
 
+            <?php
+            $paginationIdSuffix = '-top';
+            require MONCINE_ROOT . '/templates/_catalog_admin_pagination.php';
+            ?>
+
             <p class="table-scroll-hint show-mobile-only">Faites glisser le tableau horizontalement pour voir toutes les colonnes.</p>
-            <div class="table-scroll">
+            <div id="catalogue-list" class="table-scroll catalogue-list-anchor">
                 <table class="films-table films-table--sortable catalog-admin-table">
                     <thead>
                         <tr>
@@ -269,16 +261,10 @@ $pageUrl = static function (int $targetPage) use ($search, $sortBy, $sortDir): s
                 </table>
             </div>
 
-            <?php if ($totalPages > 1): ?>
-                <nav class="catalog-admin-pagination" aria-label="Pagination du catalogue">
-                    <?php if ($page > 1): ?>
-                        <a href="<?= Moncine\View::escape($pageUrl($page - 1)) ?>" class="btn btn-secondary btn-sm">← Page précédente</a>
-                    <?php endif; ?>
-                    <?php if ($page < $totalPages): ?>
-                        <a href="<?= Moncine\View::escape($pageUrl($page + 1)) ?>" class="btn btn-secondary btn-sm">Page suivante →</a>
-                    <?php endif; ?>
-                </nav>
-            <?php endif; ?>
+            <?php
+            $paginationIdSuffix = '-bottom';
+            require MONCINE_ROOT . '/templates/_catalog_admin_pagination.php';
+            ?>
         <?php endif; ?>
     </section>
 

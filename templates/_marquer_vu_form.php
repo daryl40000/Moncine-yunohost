@@ -22,6 +22,9 @@ $maxDate = Moncine\HistoriqueRepository::todayForInputIso();
     <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
     <input type="hidden" name="film_id" value="<?= (int) $filmId ?>">
     <input type="hidden" name="return" value="<?= Moncine\View::escape($return) ?>">
+    <?php if ($return === 'film' && isset($filmListContext)): ?>
+        <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
+    <?php endif; ?>
 
     <label for="date_vue_<?= (int) $filmId ?>">Date de vision</label>
     <div class="marquer-vu-form__row">

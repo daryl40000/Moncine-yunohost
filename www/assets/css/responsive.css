@@ -154,6 +154,10 @@ video {
     display: flex;
 }
 
+.site-nav__menu {
+    width: 100%;
+}
+
 .site-nav a {
     display: block;
     margin: 0;
@@ -206,6 +210,10 @@ video {
         font-size: 0.9rem;
         min-height: auto;
         white-space: nowrap;
+    }
+
+    .site-nav__menu {
+        width: auto;
     }
 }
 

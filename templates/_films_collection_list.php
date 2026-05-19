@@ -4,7 +4,9 @@
  *
  * @var list<array<string, mixed>> $films
  * @var callable $sortHeader
+ * @var Moncine\FilmListContext $filmListContext
  */
+$filmListContext = $filmListContext ?? Moncine\FilmListContext::forCollection($sortBy ?? 'titre', $sortDir ?? 'asc', $query ?? '', $kindFilter ?? '');
 ?>
 <p class="table-scroll-hint show-mobile-only">Faites glisser le tableau horizontalement pour voir toutes les colonnes.</p>
 <div class="table-scroll">
@@ -35,7 +37,7 @@
             $sagaLabel = trim((string) ($film['saga'] ?? ''));
             $filmId = (int) $film['id'];
             $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null);
-            $filmUrl = '/film.php?id=' . $filmId;
+            $filmUrl = $filmListContext->filmUrl($filmId);
             ?>
             <tr>
                 <td class="col-select">
