@@ -65,13 +65,12 @@ final class CatalogFilmRepository
         $direction = strtolower($sortDir) === 'desc' ? 'DESC' : 'ASC';
         $orderExpr = self::COLLECTION_SORT_COLUMNS[$sortBy];
 
-        $sql = 'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id) AS derniere_vue,
-                (SELECT MAX(h.note) FROM historique h
-                 WHERE h.film_id = b.id AND h.note IS NOT NULL AND h.note >= 1) AS note_max
-             FROM ' . CatalogSchema::JOIN;
+        $includeFoyerAverage = $statut === LibraryStatut::COLLECTION && $this->usesFoyerRatings();
 
-        [$userWhere, $params] = CatalogSchema::userFilter($this->userId(), $statut);
+        $sql = 'SELECT ' . CatalogSchema::selectFilmRow() . $this->collectionRatingSelectSql($includeFoyerAverage)
+             . ' FROM ' . CatalogSchema::JOIN;
+
+        [$userWhere, $params] = CatalogSchema::libraryFilter($this->foyerId(), $this->userId(), $statut);
         $whereParts = [$userWhere];
 
         $searchWhere = self::collectionSearchWhereSql($searchQuery, $params);
@@ -90,6 +89,7 @@ final class CatalogFilmRepository
             $sql .= ', o.titre COLLATE FRENCH_NOCASE ASC';
         }
 
+        $this->appendCollectionRatingParams($params, $includeFoyerAverage);
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
@@ -111,20 +111,21 @@ final class CatalogFilmRepository
     /** Films + dernière vision et note (pour export), collection uniquement. */
     public function findAllForExport(): array
     {
-        [$userWhere, $params] = CatalogSchema::userFilter($this->userId(), LibraryStatut::COLLECTION);
+        [$userWhere, $params] = CatalogSchema::libraryFilter($this->foyerId(), $this->userId(), LibraryStatut::COLLECTION);
 
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . ',
                 (SELECT h.date_vue FROM historique h
-                 WHERE h.film_id = b.id
+                 WHERE h.film_id = b.id AND h.user_id = :history_user_id
                  ORDER BY h.date_vue DESC, h.id DESC LIMIT 1) AS derniere_vue,
                 (SELECT h.note FROM historique h
-                 WHERE h.film_id = b.id
+                 WHERE h.film_id = b.id AND h.user_id = :history_user_id
                  ORDER BY h.date_vue DESC, h.id DESC LIMIT 1) AS derniere_note
              FROM ' . CatalogSchema::JOIN . '
              WHERE ' . $userWhere . '
              ORDER BY o.titre COLLATE FRENCH_NOCASE'
         );
+        $params['history_user_id'] = $this->userId();
         $stmt->execute($params);
 
         return $stmt->fetchAll();
@@ -137,20 +138,21 @@ final class CatalogFilmRepository
      */
     public function findAllLibraryForExport(): array
     {
-        [$userWhere, $params] = CatalogSchema::userFilter($this->userId(), null);
+        [$userWhere, $params] = CatalogSchema::libraryFilter($this->foyerId(), $this->userId(), null);
 
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . ',
                 (SELECT h.date_vue FROM historique h
-                 WHERE h.film_id = b.id
+                 WHERE h.film_id = b.id AND h.user_id = :history_user_id
                  ORDER BY h.date_vue DESC, h.id DESC LIMIT 1) AS derniere_vue,
                 (SELECT h.note FROM historique h
-                 WHERE h.film_id = b.id
+                 WHERE h.film_id = b.id AND h.user_id = :history_user_id
                  ORDER BY h.date_vue DESC, h.id DESC LIMIT 1) AS derniere_note
              FROM ' . CatalogSchema::JOIN . '
              WHERE ' . $userWhere . '
              ORDER BY b.statut COLLATE FRENCH_NOCASE, o.titre COLLATE FRENCH_NOCASE'
         );
+        $params['history_user_id'] = $this->userId();
         $stmt->execute($params);
 
         return $stmt->fetchAll();
@@ -158,8 +160,16 @@ final class CatalogFilmRepository
 
     public function countLibraryEntries(): int
     {
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM bibliotheque WHERE user_id = ?');
-        $stmt->execute([$this->userId()]);
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM bibliotheque
+             WHERE (foyer_id = ? AND statut = ?) OR (user_id = ? AND statut = ?)'
+        );
+        $stmt->execute([
+            $this->foyerId(),
+            LibraryStatut::COLLECTION,
+            $this->userId(),
+            LibraryStatut::WISHLIST,
+        ]);
 
         return (int) $stmt->fetchColumn();
     }
@@ -167,15 +177,16 @@ final class CatalogFilmRepository
     /** Même liste collection, ordre aléatoire. */
     public function findAllRandomOrder(): array
     {
-        [$userWhere, $params] = CatalogSchema::userFilter($this->userId(), LibraryStatut::COLLECTION);
+        [$userWhere, $params] = CatalogSchema::libraryFilter($this->foyerId(), $this->userId(), LibraryStatut::COLLECTION);
 
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id) AS derniere_vue
+                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id AND h.user_id = :history_user_id) AS derniere_vue
              FROM ' . CatalogSchema::JOIN . '
              WHERE ' . $userWhere . '
              ORDER BY RANDOM()'
         );
+        $params['history_user_id'] = $this->userId();
         $stmt->execute($params);
 
         return $stmt->fetchAll();
@@ -183,24 +194,42 @@ final class CatalogFilmRepository
 
     public function count(): int
     {
-        return $this->bibliotheque->countByStatut($this->userId(), LibraryStatut::COLLECTION);
+        return $this->bibliotheque->countByStatut($this->userId(), $this->foyerId(), LibraryStatut::COLLECTION);
     }
 
     public function countWishlist(): int
     {
-        return $this->bibliotheque->countByStatut($this->userId(), LibraryStatut::WISHLIST);
+        return $this->bibliotheque->countByStatut($this->userId(), $this->foyerId(), LibraryStatut::WISHLIST);
     }
 
     public function deleteAll(): void
     {
         $userId = $this->userId();
+        $foyerId = $this->foyerId();
+
         $stmt = $this->db->prepare(
-            'DELETE FROM historique WHERE film_id IN (SELECT id FROM bibliotheque WHERE user_id = ?)'
+            'DELETE FROM historique WHERE user_id = ?'
         );
         $stmt->execute([$userId]);
 
-        $stmt = $this->db->prepare('DELETE FROM bibliotheque WHERE user_id = ?');
-        $stmt->execute([$userId]);
+        if ($foyerId > 0) {
+            $stmt = $this->db->prepare(
+                'DELETE FROM historique WHERE film_id IN (
+                    SELECT id FROM bibliotheque WHERE foyer_id = ? AND statut = ?
+                 )'
+            );
+            $stmt->execute([$foyerId, LibraryStatut::COLLECTION]);
+
+            $stmt = $this->db->prepare(
+                'DELETE FROM bibliotheque WHERE foyer_id = ? AND statut = ?'
+            );
+            $stmt->execute([$foyerId, LibraryStatut::COLLECTION]);
+        }
+
+        $stmt = $this->db->prepare(
+            'DELETE FROM bibliotheque WHERE user_id = ? AND statut = ?'
+        );
+        $stmt->execute([$userId, LibraryStatut::WISHLIST]);
     }
 
     public function deleteById(int $filmId): bool
@@ -210,9 +239,16 @@ final class CatalogFilmRepository
         }
 
         $userId = $this->userId();
-        $this->db->prepare('DELETE FROM historique WHERE film_id = ?')->execute([$filmId]);
+        $foyerId = $this->foyerId();
+        $item = $this->bibliotheque->findById($filmId, $userId, $foyerId);
+        if ($item !== null && ($item['statut'] ?? '') === LibraryStatut::COLLECTION) {
+            $this->db->prepare('DELETE FROM historique WHERE film_id = ?')->execute([$filmId]);
+        } else {
+            $this->db->prepare('DELETE FROM historique WHERE film_id = ? AND user_id = ?')
+                ->execute([$filmId, $userId]);
+        }
 
-        return $this->bibliotheque->deleteById($filmId, $userId);
+        return $this->bibliotheque->deleteById($filmId, $userId, $foyerId);
     }
 
     /**
@@ -232,7 +268,7 @@ final class CatalogFilmRepository
 
     public function findById(int $id): ?array
     {
-        return $this->bibliotheque->findById($id, $this->userId());
+        return $this->bibliotheque->findById($id, $this->userId(), $this->foyerId());
     }
 
     public function findByTitreAndRealisateur(string $titre, string $realisateur): ?array
@@ -242,7 +278,7 @@ final class CatalogFilmRepository
             return null;
         }
 
-        $library = $this->bibliotheque->findByOeuvreId((int) $oeuvre['id'], $this->userId());
+        $library = $this->bibliotheque->findByOeuvreId((int) $oeuvre['id'], $this->userId(), $this->foyerId());
         if ($library === null) {
             return null;
         }
@@ -267,7 +303,7 @@ final class CatalogFilmRepository
                 continue;
             }
 
-            $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $userId);
+            $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $userId, $this->foyerId());
             $libraryStatut = $library !== null
                 ? (string) ($library['statut'] ?? LibraryStatut::COLLECTION)
                 : '';
@@ -350,7 +386,7 @@ final class CatalogFilmRepository
                     'ID catalogue ' . $oeuvreId . ' introuvable. Importez d’abord le catalogue (admin).'
                 );
             }
-            $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $this->userId());
+            $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $this->userId(), $this->foyerId());
             if ($library !== null) {
                 $this->applyLibraryImportUpdate((int) $library['id'], $data, $importedColumns, $statut);
 
@@ -358,7 +394,7 @@ final class CatalogFilmRepository
             }
 
             $payload = $this->libraryPayloadFromImport($data, $statut);
-            $this->bibliotheque->insert($this->userId(), $oeuvreId, $payload);
+            $this->bibliotheque->insert($this->userId(), $this->foyerId(), $oeuvreId, $payload);
 
             return;
         }
@@ -388,7 +424,7 @@ final class CatalogFilmRepository
             );
         }
 
-        $library = $this->bibliotheque->findByOeuvreId((int) $oeuvre['id'], $this->userId());
+        $library = $this->bibliotheque->findByOeuvreId((int) $oeuvre['id'], $this->userId(), $this->foyerId());
         if ($library !== null) {
             $this->applyLibraryImportUpdate((int) $library['id'], $data, $importedColumns, $statut);
 
@@ -397,6 +433,7 @@ final class CatalogFilmRepository
 
         $this->bibliotheque->insert(
             $this->userId(),
+            $this->foyerId(),
             (int) $oeuvre['id'],
             $this->libraryPayloadFromImport($data, $statut)
         );
@@ -477,7 +514,7 @@ final class CatalogFilmRepository
         if ($existing === null && $oeuvreExisting === null) {
             $oeuvreId = $this->insertOeuvreFromImport($oeuvrePayload, $data);
             $this->cacheOeuvrePosterIfRemote($oeuvreId, (string) ($oeuvrePayload['poster_url'] ?? ''));
-            $this->bibliotheque->insert($this->userId(), $oeuvreId, $libraryPayload);
+            $this->bibliotheque->insert($this->userId(), $this->foyerId(), $oeuvreId, $libraryPayload);
 
             return;
         }
@@ -489,7 +526,7 @@ final class CatalogFilmRepository
                 $this->oeuvres->update($oeuvreId, $oeuvrePayload, $oeuvreMerge);
             }
             $this->cacheOeuvrePosterIfRemote($oeuvreId, (string) ($oeuvrePayload['poster_url'] ?? ''));
-            $this->bibliotheque->insert($this->userId(), $oeuvreId, $libraryPayload);
+            $this->bibliotheque->insert($this->userId(), $this->foyerId(), $oeuvreId, $libraryPayload);
 
             return;
         }
@@ -521,10 +558,10 @@ final class CatalogFilmRepository
     {
         $stmt = $this->db->prepare(
             'SELECT DISTINCT b.saga FROM bibliotheque b
-             WHERE b.user_id = ? AND b.statut = ? AND TRIM(b.saga) != ""
+             WHERE b.foyer_id = ? AND b.statut = ? AND TRIM(b.saga) != ""
              ORDER BY b.saga COLLATE FRENCH_NOCASE'
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
         $rows = $stmt->fetchAll();
 
         $out = [];
@@ -545,11 +582,11 @@ final class CatalogFilmRepository
     {
         $stmt = $this->db->prepare(
             'SELECT b.saga, COUNT(*) AS film_count FROM bibliotheque b
-             WHERE b.user_id = ? AND b.statut = ? AND TRIM(b.saga) != ""
+             WHERE b.foyer_id = ? AND b.statut = ? AND TRIM(b.saga) != ""
              GROUP BY b.saga
              ORDER BY b.saga COLLATE FRENCH_NOCASE'
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
         $rows = $stmt->fetchAll();
 
         $out = [];
@@ -577,24 +614,25 @@ final class CatalogFilmRepository
             return [];
         }
 
+        $includeFoyerAverage = $this->usesFoyerRatings();
+
         $stmt = $this->db->prepare(
-            'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id) AS derniere_vue,
-                (SELECT MAX(h.note) FROM historique h
-                 WHERE h.film_id = b.id AND h.note IS NOT NULL AND h.note >= 1) AS note_max
+            'SELECT ' . CatalogSchema::selectFilmRow() . $this->collectionRatingSelectSql($includeFoyerAverage) . '
              FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = :catalog_user_id
+             WHERE b.foyer_id = :catalog_foyer_id
                AND b.statut = :catalog_statut
                AND b.saga = :saga
              ORDER BY
                 CASE WHEN b.saga_ordre > 0 THEN b.saga_ordre ELSE 999999 END ASC,
                 o.titre COLLATE FRENCH_NOCASE ASC'
         );
-        $stmt->execute([
-            'catalog_user_id' => $this->userId(),
+        $params = [
+            'catalog_foyer_id' => $this->foyerId(),
             'catalog_statut' => LibraryStatut::COLLECTION,
             'saga' => $saga,
-        ]);
+        ];
+        $this->appendCollectionRatingParams($params, $includeFoyerAverage);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
@@ -612,7 +650,7 @@ final class CatalogFilmRepository
         $startOrder = max(1, $startOrder);
         $stmt = $this->db->prepare(
             'UPDATE bibliotheque SET saga = :saga, saga_ordre = :saga_ordre
-             WHERE id = :id AND user_id = :user_id AND statut = :statut'
+             WHERE id = :id AND foyer_id = :foyer_id AND statut = :statut'
         );
 
         $updated = 0;
@@ -626,7 +664,7 @@ final class CatalogFilmRepository
                 'saga' => $saga,
                 'saga_ordre' => $ordre,
                 'id' => $filmId,
-                'user_id' => $this->userId(),
+                'foyer_id' => $this->foyerId(),
                 'statut' => LibraryStatut::COLLECTION,
             ]);
             if ($stmt->rowCount() > 0) {
@@ -658,9 +696,9 @@ final class CatalogFilmRepository
 
         $countStmt = $this->db->prepare(
             'SELECT COUNT(*) FROM bibliotheque
-             WHERE user_id = ? AND statut = ? AND saga = ?'
+             WHERE foyer_id = ? AND statut = ? AND saga = ?'
         );
-        $countStmt->execute([$this->userId(), LibraryStatut::COLLECTION, $oldName]);
+        $countStmt->execute([$this->foyerId(), LibraryStatut::COLLECTION, $oldName]);
         $filmCount = (int) $countStmt->fetchColumn();
         if ($filmCount === 0) {
             return ['ok' => false, 'error' => 'Aucun film n’utilise cette saga.'];
@@ -668,11 +706,11 @@ final class CatalogFilmRepository
 
         $stmt = $this->db->prepare(
             'UPDATE bibliotheque SET saga = :new_name
-             WHERE user_id = :user_id AND statut = :statut AND saga = :old_name'
+             WHERE foyer_id = :foyer_id AND statut = :statut AND saga = :old_name'
         );
         $stmt->execute([
             'new_name' => $newName,
-            'user_id' => $this->userId(),
+            'foyer_id' => $this->foyerId(),
             'statut' => LibraryStatut::COLLECTION,
             'old_name' => $oldName,
         ]);
@@ -692,7 +730,7 @@ final class CatalogFilmRepository
         $supportKey = SupportPhysique::normalize($supportKey);
         $stmt = $this->db->prepare(
             'UPDATE bibliotheque SET support_physique = :support_physique
-             WHERE id = :id AND user_id = :user_id'
+             WHERE id = :id AND foyer_id = :foyer_id'
         );
 
         $updated = 0;
@@ -704,7 +742,7 @@ final class CatalogFilmRepository
             $stmt->execute([
                 'support_physique' => $supportKey,
                 'id' => $filmId,
-                'user_id' => $this->userId(),
+                'foyer_id' => $this->foyerId(),
             ]);
             if ($stmt->rowCount() > 0) {
                 $updated++;
@@ -737,22 +775,23 @@ final class CatalogFilmRepository
             return [];
         }
 
+        $includeFoyerAverage = $this->usesFoyerRatings();
+
         $stmt = $this->db->prepare(
-            'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id) AS derniere_vue,
-                (SELECT MAX(h.note) FROM historique h
-                 WHERE h.film_id = b.id AND h.note IS NOT NULL AND h.note >= 1) AS note_max
+            'SELECT ' . CatalogSchema::selectFilmRow() . $this->collectionRatingSelectSql($includeFoyerAverage) . '
              FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = :catalog_user_id
+             WHERE b.foyer_id = :catalog_foyer_id
                AND b.statut = :catalog_statut
                AND b.support_physique = :support
              ORDER BY o.titre COLLATE FRENCH_NOCASE'
         );
-        $stmt->execute([
-            'catalog_user_id' => $this->userId(),
+        $params = [
+            'catalog_foyer_id' => $this->foyerId(),
             'catalog_statut' => LibraryStatut::COLLECTION,
             'support' => $supportKey,
-        ]);
+        ];
+        $this->appendCollectionRatingParams($params, $includeFoyerAverage);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
@@ -762,10 +801,10 @@ final class CatalogFilmRepository
     {
         $stmt = $this->db->prepare(
             'SELECT DISTINCT b.support_physique FROM bibliotheque b
-             WHERE b.user_id = ? AND b.statut = ? AND TRIM(b.support_physique) != ""
+             WHERE b.foyer_id = ? AND b.statut = ? AND TRIM(b.support_physique) != ""
              ORDER BY b.support_physique COLLATE FRENCH_NOCASE'
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
         $rows = $stmt->fetchAll();
 
         $out = [];
@@ -794,9 +833,9 @@ final class CatalogFilmRepository
     {
         $stmt = $this->db->prepare(
             'SELECT o.nationalite FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = ? AND b.statut = ? AND TRIM(o.nationalite) != ""'
+             WHERE b.foyer_id = ? AND b.statut = ? AND TRIM(o.nationalite) != ""'
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
         $rows = $stmt->fetchAll();
 
         $countries = [];
@@ -818,9 +857,9 @@ final class CatalogFilmRepository
     {
         $stmt = $this->db->prepare(
             'SELECT o.styles FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = ? AND b.statut = ? AND o.styles != ""'
+             WHERE b.foyer_id = ? AND b.statut = ? AND o.styles != ""'
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
         $rows = $stmt->fetchAll();
 
         $styles = [];
@@ -840,18 +879,18 @@ final class CatalogFilmRepository
         if ($includeAttempted) {
             $stmt = $this->db->prepare(
                 'SELECT COUNT(*) FROM ' . CatalogSchema::JOIN . '
-                 WHERE b.user_id = ? AND b.statut = ?'
+                 WHERE b.foyer_id = ? AND b.statut = ?'
             );
-            $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+            $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
 
             return (int) $stmt->fetchColumn();
         }
 
         $stmt = $this->db->prepare(
             'SELECT COUNT(*) FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = ? AND b.statut = ? AND ' . self::enrichmentPendingSql('o')
+             WHERE b.foyer_id = ? AND b.statut = ? AND ' . self::enrichmentPendingSql('o')
         );
-        $stmt->execute([$this->userId(), LibraryStatut::COLLECTION]);
+        $stmt->execute([$this->foyerId(), LibraryStatut::COLLECTION]);
 
         return (int) $stmt->fetchColumn();
     }
@@ -866,7 +905,7 @@ final class CatalogFilmRepository
             $stmt = $this->db->prepare(
                 'SELECT ' . CatalogSchema::selectFilmRow() . '
                  FROM ' . CatalogSchema::JOIN . '
-                 WHERE b.user_id = :catalog_user_id AND b.statut = :catalog_statut
+                 WHERE b.foyer_id = :catalog_foyer_id AND b.statut = :catalog_statut
                  ORDER BY o.titre COLLATE FRENCH_NOCASE
                  LIMIT :lim'
             );
@@ -874,13 +913,13 @@ final class CatalogFilmRepository
             $stmt = $this->db->prepare(
                 'SELECT ' . CatalogSchema::selectFilmRow() . '
                  FROM ' . CatalogSchema::JOIN . '
-                 WHERE b.user_id = :catalog_user_id AND b.statut = :catalog_statut
+                 WHERE b.foyer_id = :catalog_foyer_id AND b.statut = :catalog_statut
                    AND ' . self::enrichmentPendingSql('o') . '
                  ORDER BY o.titre COLLATE FRENCH_NOCASE
                  LIMIT :lim'
             );
         }
-        $stmt->bindValue('catalog_user_id', $this->userId(), PDO::PARAM_INT);
+        $stmt->bindValue('catalog_foyer_id', $this->foyerId(), PDO::PARAM_INT);
         $stmt->bindValue('catalog_statut', LibraryStatut::COLLECTION);
         $stmt->bindValue('lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -1097,14 +1136,19 @@ final class CatalogFilmRepository
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . '
              FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = :catalog_user_id AND o.tmdb_id = :tmdb_id
+             WHERE (
+                    (b.foyer_id = :catalog_foyer_id AND b.statut = :collection)
+                    OR (b.user_id = :catalog_user_id AND b.statut = :wishlist)
+                 ) AND o.tmdb_id = :tmdb_id
              ORDER BY CASE WHEN b.statut = :collection THEN 0 ELSE 1 END, b.id ASC
              LIMIT 1'
         );
         $stmt->execute([
+            'catalog_foyer_id' => $this->foyerId(),
             'catalog_user_id' => $this->userId(),
             'tmdb_id' => $tmdbId,
             'collection' => LibraryStatut::COLLECTION,
+            'wishlist' => LibraryStatut::WISHLIST,
         ]);
         $row = $stmt->fetch();
 
@@ -1133,8 +1177,9 @@ final class CatalogFilmRepository
             'like2' => $like,
             'like3' => $like,
             'like4' => $like,
-            'catalog_user_id' => $this->userId(),
+            'catalog_foyer_id' => $this->foyerId(),
             'catalog_statut' => LibraryStatut::COLLECTION,
+            'history_user_id' => $this->userId(),
         ];
 
         if ($personId > 0) {
@@ -1153,9 +1198,9 @@ final class CatalogFilmRepository
 
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id) AS derniere_vue
+                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id AND h.user_id = :history_user_id) AS derniere_vue
              FROM ' . CatalogSchema::JOIN . '
-             WHERE b.user_id = :catalog_user_id AND b.statut = :catalog_statut AND (' . $where . ')
+             WHERE b.foyer_id = :catalog_foyer_id AND b.statut = :catalog_statut AND (' . $where . ')
              ORDER BY o.titre COLLATE FRENCH_NOCASE'
         );
         $stmt->execute($params);
@@ -1167,27 +1212,27 @@ final class CatalogFilmRepository
     public function distinctPersonnes(int $limit = 300): array
     {
         $limit = max(1, min(500, $limit));
-        $userId = $this->userId();
+        $foyerId = $this->foyerId();
         $statut = LibraryStatut::COLLECTION;
         $sql = 'SELECT DISTINCT name FROM (
                 SELECT o.realisateur AS name FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.user_id = :u1 AND b.statut = :s1 AND TRIM(o.realisateur) != ""
+                    WHERE b.foyer_id = :f1 AND b.statut = :s1 AND TRIM(o.realisateur) != ""
                 UNION SELECT o.acteur_1 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.user_id = :u2 AND b.statut = :s2 AND TRIM(o.acteur_1) != ""
+                    WHERE b.foyer_id = :f2 AND b.statut = :s2 AND TRIM(o.acteur_1) != ""
                 UNION SELECT o.acteur_2 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.user_id = :u3 AND b.statut = :s3 AND TRIM(o.acteur_2) != ""
+                    WHERE b.foyer_id = :f3 AND b.statut = :s3 AND TRIM(o.acteur_2) != ""
                 UNION SELECT o.acteur_3 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.user_id = :u4 AND b.statut = :s4 AND TRIM(o.acteur_3) != ""
+                    WHERE b.foyer_id = :f4 AND b.statut = :s4 AND TRIM(o.acteur_3) != ""
             ) ORDER BY name COLLATE FRENCH_NOCASE LIMIT ' . $limit;
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            'u1' => $userId,
+            'f1' => $foyerId,
             's1' => $statut,
-            'u2' => $userId,
+            'f2' => $foyerId,
             's2' => $statut,
-            'u3' => $userId,
+            'f3' => $foyerId,
             's3' => $statut,
-            'u4' => $userId,
+            'f4' => $foyerId,
             's4' => $statut,
         ]);
         $rows = $stmt->fetchAll();
@@ -1411,7 +1456,7 @@ final class CatalogFilmRepository
             return 'Œuvre introuvable dans le catalogue.';
         }
 
-        $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $this->userId());
+        $library = $this->bibliotheque->findByOeuvreId($oeuvreId, $this->userId(), $this->foyerId());
         if ($library !== null) {
             $libraryId = (int) $library['id'];
             $currentStatut = (string) ($library['statut'] ?? LibraryStatut::COLLECTION);
@@ -1423,7 +1468,13 @@ final class CatalogFilmRepository
             if ($updateResult !== true) {
                 return (string) $updateResult;
             }
-            $this->bibliotheque->update($libraryId, ['statut' => $statut]);
+            $update = ['statut' => $statut];
+            if ($statut === LibraryStatut::COLLECTION) {
+                $update['foyer_id'] = $this->foyerId();
+            } else {
+                $update['foyer_id'] = null;
+            }
+            $this->bibliotheque->update($libraryId, $update);
 
             return $libraryId;
         }
@@ -1443,10 +1494,10 @@ final class CatalogFilmRepository
             $libraryPayload['saga_ordre'] = 0;
         }
 
-        $libraryId = $this->bibliotheque->insert($this->userId(), $oeuvreId, $libraryPayload);
+        $libraryId = $this->bibliotheque->insert($this->userId(), $this->foyerId(), $oeuvreId, $libraryPayload);
         $updateResult = $this->updateManual($libraryId, $data);
         if ($updateResult !== true) {
-            $this->bibliotheque->deleteById($libraryId, $this->userId());
+            $this->bibliotheque->deleteById($libraryId, $this->userId(), $this->foyerId());
 
             return (string) $updateResult;
         }
@@ -1456,7 +1507,7 @@ final class CatalogFilmRepository
 
     public function promoteToCollection(int $libraryId, string $supportKey = ''): bool
     {
-        return $this->bibliotheque->promoteToCollection($libraryId, $this->userId(), $supportKey);
+        return $this->bibliotheque->promoteToCollection($libraryId, $this->userId(), $this->foyerId(), $supportKey);
     }
 
     /** @return list<string> */
@@ -1502,9 +1553,42 @@ final class CatalogFilmRepository
         return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
+    private function usesFoyerRatings(): bool
+    {
+        return CatalogSchema::usesFoyerModel($this->db) && $this->foyerId() > 0;
+    }
+
+    private function collectionRatingSelectSql(bool $includeFoyerAverage): string
+    {
+        $sql = ',
+                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id AND h.user_id = :history_user_id) AS derniere_vue,
+                (SELECT MAX(h.note) FROM historique h
+                 WHERE h.film_id = b.id AND h.user_id = :history_user_id AND h.note IS NOT NULL AND h.note >= 1) AS note_max';
+
+        if ($includeFoyerAverage) {
+            $sql .= ',' . CatalogSchema::foyerAverageNoteSubquery();
+        }
+
+        return $sql;
+    }
+
+    /** @param array<string, int|string|float|null> $params */
+    private function appendCollectionRatingParams(array &$params, bool $includeFoyerAverage): void
+    {
+        $params['history_user_id'] = $this->userId();
+        if ($includeFoyerAverage) {
+            $params['foyer_rating_id'] = $this->foyerId();
+        }
+    }
+
     private function userId(): int
     {
         return UserContext::currentUserId();
+    }
+
+    private function foyerId(): int
+    {
+        return UserContext::currentFoyerId();
     }
 
     private static function enrichmentPendingSql(string $alias): string

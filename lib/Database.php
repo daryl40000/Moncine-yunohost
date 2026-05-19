@@ -76,6 +76,7 @@ final class Database
 
         // Fichiers numérotés dans sql/migrations/ (001, 002, …) non encore appliqués.
         $migrator->runPendingMigrations();
+        FoyerMigration::runIfNeeded(self::$pdo);
         $migrator->setMetadata(SchemaMigrator::META_PACKAGE_EDITION, SchemaMigrator::EDITION_YUNOHOST);
 
         // Correctif ponctuel si une ancienne base avait une mauvaise clé sur historique.

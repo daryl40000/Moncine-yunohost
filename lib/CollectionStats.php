@@ -84,8 +84,7 @@ final class CollectionStats
         if ($this->usesPerUserHistory()) {
             $stmt = $this->db->prepare(
                 'SELECT COUNT(DISTINCT h.film_id) FROM historique h
-                 INNER JOIN bibliotheque b ON b.id = h.film_id
-                 WHERE b.user_id = ?'
+                 WHERE h.user_id = ?'
             );
             $stmt->execute([$this->currentUserId()]);
 
@@ -102,8 +101,7 @@ final class CollectionStats
         if ($this->usesPerUserHistory()) {
             $stmt = $this->db->prepare(
                 "SELECT COUNT(DISTINCT h.film_id) FROM historique h
-                 INNER JOIN bibliotheque b ON b.id = h.film_id
-                 WHERE b.user_id = ? AND strftime('%Y', h.date_vue) = ?"
+                 WHERE h.user_id = ? AND strftime('%Y', h.date_vue) = ?"
             );
             $stmt->execute([$this->currentUserId(), (string) $year]);
 
@@ -124,8 +122,7 @@ final class CollectionStats
         if ($this->usesPerUserHistory()) {
             $stmt = $this->db->prepare(
                 'SELECT COUNT(*) FROM historique h
-                 INNER JOIN bibliotheque b ON b.id = h.film_id
-                 WHERE b.user_id = ?'
+                 WHERE h.user_id = ?'
             );
             $stmt->execute([$this->currentUserId()]);
 
@@ -284,10 +281,10 @@ final class CollectionStats
         if (CatalogSchema::usesCatalogTables($this->db)) {
             $stmt = $this->db->prepare(
                 'SELECT support_physique, COUNT(*) AS cnt FROM bibliotheque
-                 WHERE user_id = ? AND statut = ?
+                 WHERE foyer_id = ? AND statut = ?
                  GROUP BY support_physique'
             );
-            $stmt->execute([UserContext::currentUserId(), LibraryStatut::COLLECTION]);
+            $stmt->execute([UserContext::currentFoyerId(), LibraryStatut::COLLECTION]);
         } else {
             $stmt = $this->db->query(
                 'SELECT support_physique, COUNT(*) AS cnt FROM films GROUP BY support_physique'
@@ -349,15 +346,16 @@ final class CollectionStats
                  FROM bibliotheque b
                  INNER JOIN oeuvres o ON o.id = b.oeuvre_id
                  INNER JOIN historique h ON h.film_id = b.id
-                 WHERE b.user_id = ? AND b.statut = ?
+                 WHERE b.foyer_id = ? AND b.statut = ? AND h.user_id = ?
                    AND h.note IS NOT NULL AND h.note >= 1 AND h.note <= 10
                  GROUP BY b.id
                  ORDER BY best_note DESC, o.titre COLLATE FRENCH_NOCASE ASC
                  LIMIT ?'
             );
-            $stmt->bindValue(1, UserContext::currentUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(1, UserContext::currentFoyerId(), PDO::PARAM_INT);
             $stmt->bindValue(2, LibraryStatut::COLLECTION);
-            $stmt->bindValue(3, max(1, $limit), PDO::PARAM_INT);
+            $stmt->bindValue(3, UserContext::currentUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(4, max(1, $limit), PDO::PARAM_INT);
             $stmt->execute();
 
             return $stmt->fetchAll();
@@ -391,15 +389,16 @@ final class CollectionStats
                  FROM historique h
                  INNER JOIN bibliotheque b ON b.id = h.film_id
                  INNER JOIN oeuvres o ON o.id = b.oeuvre_id
-                 WHERE b.user_id = ? AND b.statut = ?
+                 WHERE b.foyer_id = ? AND b.statut = ? AND h.user_id = ?
                  GROUP BY h.film_id
                  HAVING view_count > 1
                  ORDER BY view_count DESC, o.titre COLLATE FRENCH_NOCASE ASC
                  LIMIT ?'
             );
-            $stmt->bindValue(1, UserContext::currentUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(1, UserContext::currentFoyerId(), PDO::PARAM_INT);
             $stmt->bindValue(2, LibraryStatut::COLLECTION);
-            $stmt->bindValue(3, max(1, $limit), PDO::PARAM_INT);
+            $stmt->bindValue(3, UserContext::currentUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(4, max(1, $limit), PDO::PARAM_INT);
             $stmt->execute();
 
             return $stmt->fetchAll();
@@ -433,17 +432,13 @@ final class CollectionStats
     /** Jointure historique → bibliothèque (multi-comptes) ou chaîne vide (legacy). */
     private function historyJoinSql(): string
     {
-        if ($this->usesPerUserHistory()) {
-            return 'INNER JOIN bibliotheque b ON b.id = h.film_id';
-        }
-
         return '';
     }
 
     private function historyUserWhereSql(): string
     {
         if ($this->usesPerUserHistory()) {
-            return 'b.user_id = ?';
+            return 'h.user_id = ?';
         }
 
         return '1=1';

@@ -1,6 +1,6 @@
 <?php
 /**
- * Bibliothèque personnelle : lien utilisateur ↔ œuvre (collection ou wishlist).
+ * Bibliothèque : collection partagée (foyer) ou envies personnelles (utilisateur).
  */
 
 declare(strict_types=1);
@@ -18,7 +18,7 @@ final class BibliothequeRepository
         $this->db = Database::getInstance();
     }
 
-    public function findById(int $id, int $userId): ?array
+    public function findById(int $id, int $userId, int $foyerId): ?array
     {
         if ($id <= 0) {
             return null;
@@ -26,39 +26,78 @@ final class BibliothequeRepository
         $stmt = $this->db->prepare(
             'SELECT ' . CatalogSchema::selectFilmRow() . '
              FROM ' . CatalogSchema::JOIN . '
-             WHERE b.id = ? AND b.user_id = ?'
+             WHERE b.id = ?
+               AND (
+                    (b.statut = :collection AND b.foyer_id = :foyer_id)
+                    OR (b.statut = :wishlist AND b.user_id = :user_id)
+               )'
         );
-        $stmt->execute([$id, $userId]);
+        $stmt->execute([
+            $id,
+            'collection' => LibraryStatut::COLLECTION,
+            'wishlist' => LibraryStatut::WISHLIST,
+            'foyer_id' => $foyerId,
+            'user_id' => $userId,
+        ]);
         $row = $stmt->fetch();
 
         return $row ?: null;
     }
 
-    public function findByOeuvreId(int $oeuvreId, int $userId): ?array
+    public function findByOeuvreId(int $oeuvreId, int $userId, int $foyerId, ?string $statut = null): ?array
     {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM bibliotheque WHERE oeuvre_id = ? AND user_id = ? LIMIT 1'
-        );
-        $stmt->execute([$oeuvreId, $userId]);
-        $row = $stmt->fetch();
+        if ($statut === LibraryStatut::WISHLIST) {
+            $stmt = $this->db->prepare(
+                'SELECT * FROM bibliotheque
+                 WHERE oeuvre_id = ? AND user_id = ? AND statut = ?
+                 LIMIT 1'
+            );
+            $stmt->execute([$oeuvreId, $userId, LibraryStatut::WISHLIST]);
+            $row = $stmt->fetch();
 
-        return $row ?: null;
+            return $row ?: null;
+        }
+
+        if ($statut === LibraryStatut::COLLECTION) {
+            $stmt = $this->db->prepare(
+                'SELECT * FROM bibliotheque
+                 WHERE oeuvre_id = ? AND foyer_id = ? AND statut = ?
+                 LIMIT 1'
+            );
+            $stmt->execute([$oeuvreId, $foyerId, LibraryStatut::COLLECTION]);
+            $row = $stmt->fetch();
+
+            return $row ?: null;
+        }
+
+        $collection = $this->findByOeuvreId($oeuvreId, $userId, $foyerId, LibraryStatut::COLLECTION);
+        if ($collection !== null) {
+            return $collection;
+        }
+
+        return $this->findByOeuvreId($oeuvreId, $userId, $foyerId, LibraryStatut::WISHLIST);
     }
 
     /**
      * @param array<string, mixed> $libraryData support_physique, format_*, saga, saga_ordre, statut
      */
-    public function insert(int $userId, int $oeuvreId, array $libraryData): int
+    public function insert(int $userId, int $foyerId, int $oeuvreId, array $libraryData): int
     {
         $statut = LibraryStatut::normalize((string) ($libraryData['statut'] ?? LibraryStatut::COLLECTION));
+        $rowFoyerId = $statut === LibraryStatut::COLLECTION ? max(0, $foyerId) : null;
+        if ($statut === LibraryStatut::COLLECTION && $rowFoyerId <= 0) {
+            throw new \RuntimeException('Aucun foyer associé à votre compte.');
+        }
+
         $stmt = $this->db->prepare(
             'INSERT INTO bibliotheque (
-                user_id, oeuvre_id, statut, support_physique, format_image, format_son,
+                user_id, foyer_id, oeuvre_id, statut, support_physique, format_image, format_son,
                 saga, saga_ordre, saison_numero, saison_label, ean
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $userId,
+            $rowFoyerId,
             $oeuvreId,
             $statut,
             SupportPhysique::normalize((string) ($libraryData['support_physique'] ?? '')),
@@ -96,6 +135,7 @@ final class BibliothequeRepository
             'saison_numero',
             'saison_label',
             'ean',
+            'foyer_id',
         ] as $field) {
             if (array_key_exists($field, $libraryData)) {
                 $sets[] = $field . ' = :' . $field;
@@ -111,13 +151,28 @@ final class BibliothequeRepository
         $stmt->execute($params);
     }
 
-    public function promoteToCollection(int $id, int $userId, string $supportKey = ''): bool
+    public function promoteToCollection(int $id, int $userId, int $foyerId, string $supportKey = ''): bool
     {
-        $item = $this->findById($id, $userId);
+        $item = $this->findById($id, $userId, $foyerId);
         if ($item === null || ($item['statut'] ?? '') === LibraryStatut::COLLECTION) {
             return false;
         }
-        $data = ['statut' => LibraryStatut::COLLECTION];
+        if ($foyerId <= 0) {
+            return false;
+        }
+
+        $oeuvreId = (int) ($item['oeuvre_id'] ?? 0);
+        $existingCollection = $this->findByOeuvreId($oeuvreId, $userId, $foyerId, LibraryStatut::COLLECTION);
+        if ($existingCollection !== null) {
+            $this->deleteById($id, $userId, $foyerId);
+
+            return true;
+        }
+
+        $data = [
+            'statut' => LibraryStatut::COLLECTION,
+            'foyer_id' => $foyerId,
+        ];
         if ($supportKey !== '') {
             $data['support_physique'] = SupportPhysique::normalize($supportKey);
         }
@@ -126,20 +181,34 @@ final class BibliothequeRepository
         return true;
     }
 
-    public function deleteById(int $id, int $userId): bool
+    public function deleteById(int $id, int $userId, int $foyerId): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM bibliotheque WHERE id = ? AND user_id = ?');
-        $stmt->execute([$id, $userId]);
+        $item = $this->findById($id, $userId, $foyerId);
+        if ($item === null) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare('DELETE FROM bibliotheque WHERE id = ?');
+        $stmt->execute([$id]);
 
         return $stmt->rowCount() > 0;
     }
 
-    public function countByStatut(int $userId, string $statut): int
+    public function countByStatut(int $userId, int $foyerId, string $statut): int
     {
+        if ($statut === LibraryStatut::WISHLIST) {
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM bibliotheque WHERE user_id = ? AND statut = ?'
+            );
+            $stmt->execute([$userId, $statut]);
+
+            return (int) $stmt->fetchColumn();
+        }
+
         $stmt = $this->db->prepare(
-            'SELECT COUNT(*) FROM bibliotheque WHERE user_id = ? AND statut = ?'
+            'SELECT COUNT(*) FROM bibliotheque WHERE foyer_id = ? AND statut = ?'
         );
-        $stmt->execute([$userId, $statut]);
+        $stmt->execute([$foyerId, $statut]);
 
         return (int) $stmt->fetchColumn();
     }

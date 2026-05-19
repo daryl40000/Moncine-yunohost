@@ -39,9 +39,6 @@ $gridSortLink = static function (string $label, string $column) use ($sortBy, $s
         $filmId = (int) $film['id'];
         $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null);
         $filmUrl = '/film.php?id=' . $filmId;
-        $noteRaw = $film['note_max'] ?? null;
-        $noteInt = $noteRaw !== null && $noteRaw !== '' ? (int) $noteRaw : null;
-        $noteLabel = Moncine\HistoriqueRepository::formatNoteSur10($noteInt);
         $annee = (int) ($film['annee'] ?? 0);
         $kindKey = \Moncine\ContentKindFilter::categoryKey($film);
         ?>
@@ -72,8 +69,15 @@ $gridSortLink = static function (string $label, string $column) use ($sortBy, $s
                         <?php if ($annee > 0): ?>
                             <span class="collection-grid__year"><?= $annee ?></span>
                         <?php endif; ?>
-                        <?php if ($noteLabel !== ''): ?>
-                            <span class="collection-grid__note"><?= Moncine\View::escape($noteLabel) ?></span>
+                        <?php
+                        $showFoyerAverage = true;
+                        $layout = 'inline';
+                        ob_start();
+                        require MONCINE_ROOT . '/templates/_film_ratings.php';
+                        $ratingsHtml = trim((string) ob_get_clean());
+                        if ($ratingsHtml !== '' && $ratingsHtml !== '—'):
+                            ?>
+                            <span class="collection-grid__note"><?= $ratingsHtml ?></span>
                         <?php endif; ?>
                     </p>
                 </a>

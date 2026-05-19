@@ -1,6 +1,12 @@
 -- Schéma Moncine — dvdthèque personnelle (catalogue + bibliothèque)
 -- Exécuté automatiquement au premier lancement si la base n'existe pas.
 
+CREATE TABLE IF NOT EXISTS foyers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS utilisateurs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nom TEXT NOT NULL DEFAULT '',
@@ -9,11 +15,14 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     actif INTEGER NOT NULL DEFAULT 1,
     last_login_at TEXT DEFAULT NULL,
+    foyer_id INTEGER DEFAULT NULL REFERENCES foyers(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_utilisateurs_email
     ON utilisateurs(email) WHERE email != '';
+
+CREATE INDEX IF NOT EXISTS idx_utilisateurs_foyer ON utilisateurs(foyer_id);
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +39,6 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash
 CREATE INDEX IF NOT EXISTS idx_password_reset_expires
     ON password_reset_tokens(expires_at);
 
--- Catalogue d’œuvres (métadonnées Moncine, enrichissement TMDB optionnel)
 CREATE TABLE IF NOT EXISTS oeuvres (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     titre TEXT NOT NULL,
@@ -62,10 +70,10 @@ CREATE TABLE IF NOT EXISTS oeuvres (
 
 CREATE INDEX IF NOT EXISTS idx_oeuvres_tmdb ON oeuvres(tmdb_id) WHERE tmdb_id > 0;
 
--- Bibliothèque personnelle (collection ou wishlist)
 CREATE TABLE IF NOT EXISTS bibliotheque (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL DEFAULT 1 REFERENCES utilisateurs(id),
+    foyer_id INTEGER DEFAULT NULL REFERENCES foyers(id),
     oeuvre_id INTEGER NOT NULL REFERENCES oeuvres(id) ON DELETE CASCADE,
     statut TEXT NOT NULL DEFAULT 'collection' CHECK (statut IN ('collection', 'wishlist')),
     support_physique TEXT DEFAULT '',
@@ -76,13 +84,20 @@ CREATE TABLE IF NOT EXISTS bibliotheque (
     saison_numero INTEGER DEFAULT 0,
     saison_label TEXT DEFAULT '',
     ean TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (user_id, oeuvre_id)
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_bibliotheque_user_statut ON bibliotheque(user_id, statut);
+CREATE INDEX IF NOT EXISTS idx_bibliotheque_foyer_statut ON bibliotheque(foyer_id, statut);
 
--- Ancienne table films (installations héritées ; migration 013 la remplit)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bibliotheque_foyer_collection
+    ON bibliotheque(foyer_id, oeuvre_id)
+    WHERE statut = 'collection' AND foyer_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bibliotheque_user_wishlist
+    ON bibliotheque(user_id, oeuvre_id)
+    WHERE statut = 'wishlist';
+
 CREATE TABLE IF NOT EXISTS films (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     titre TEXT NOT NULL,
@@ -119,10 +134,10 @@ CREATE TABLE IF NOT EXISTS films (
     UNIQUE (titre, realisateur)
 );
 
--- film_id = bibliotheque.id (entrée personnelle)
 CREATE TABLE IF NOT EXISTS historique (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     film_id INTEGER NOT NULL,
+    user_id INTEGER DEFAULT NULL REFERENCES utilisateurs(id),
     date_vue TEXT NOT NULL DEFAULT (date('now')),
     note INTEGER,
     FOREIGN KEY (film_id) REFERENCES bibliotheque(id) ON DELETE CASCADE
@@ -130,3 +145,5 @@ CREATE TABLE IF NOT EXISTS historique (
 
 CREATE INDEX IF NOT EXISTS idx_historique_film ON historique(film_id);
 CREATE INDEX IF NOT EXISTS idx_historique_date ON historique(date_vue);
+CREATE INDEX IF NOT EXISTS idx_historique_user ON historique(user_id);
+CREATE INDEX IF NOT EXISTS idx_historique_film_user ON historique(film_id, user_id);

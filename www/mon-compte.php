@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Auth;
 use Moncine\Csrf;
+use Moncine\FoyerRepository;
 use Moncine\UtilisateurRepository;
 use Moncine\View;
 
@@ -63,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 View::render('mon-compte', [
     'pageTitle' => 'Mon compte',
     'user' => $user,
+    'foyer' => (new FoyerRepository())->findForUser($userId),
     'error' => $error,
     'success' => $success,
 ]);

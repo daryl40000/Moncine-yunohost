@@ -99,7 +99,11 @@ final class CatalogAdmin
             return null;
         }
 
-        $library = (new BibliothequeRepository())->findByOeuvreId($oeuvreId, UserContext::currentUserId());
+        $library = (new BibliothequeRepository())->findByOeuvreId(
+            $oeuvreId,
+            UserContext::currentUserId(),
+            UserContext::currentFoyerId()
+        );
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM bibliotheque WHERE oeuvre_id = ?');
         $stmt->execute([$oeuvreId]);
 
@@ -294,6 +298,16 @@ final class CatalogAdmin
 
         if (!$this->oeuvres->deleteById($oeuvreId)) {
             return 'Impossible de supprimer cette œuvre.';
+        }
+
+        $adminId = Auth::currentUserId();
+        if ($adminId > 0) {
+            (new CatalogAuditLog())->log(
+                $adminId,
+                CatalogAuditLog::ACTION_DELETE,
+                $oeuvreId,
+                'Suppression du catalogue'
+            );
         }
 
         return true;

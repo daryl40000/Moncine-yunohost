@@ -32,8 +32,8 @@ define('MONCINE_INSTALL_SEED_DATA_DIR', MONCINE_DATA . '/install_seed');
 // Nom de l'application (affiché dans les pages)
 define('MONCINE_APP_NAME', 'Moncine');
 
-// Version applicative (semver) — v0.5 ≈ 50 % de la vision cible (voir ROADMAP.md)
-define('MONCINE_PACKAGE_VERSION', '0.5.0');
+// Version applicative (semver)
+define('MONCINE_PACKAGE_VERSION', '0.7.0');
 
 // Repère affiché sur la page import (vérifier que le serveur a bien le dernier code).
 define('MONCINE_IMPORT_ENGINE_BUILD', '2026-05-18-library-oeuvre-first');

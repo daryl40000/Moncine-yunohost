@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Auth;
 use Moncine\Csrf;
+use Moncine\FoyerRepository;
 use Moncine\UserRole;
 use Moncine\UtilisateurRepository;
 use Moncine\View;
@@ -16,6 +17,7 @@ use Moncine\View;
 Auth::denyUnlessAdmin('/');
 
 $repo = new UtilisateurRepository();
+$foyerRepo = new FoyerRepository();
 $error = '';
 $success = '';
 
@@ -28,10 +30,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['nom'] ?? ''),
             (string) ($_POST['email'] ?? ''),
             (string) ($_POST['password'] ?? ''),
-            (string) ($_POST['role'] ?? UserRole::USER)
+            (string) ($_POST['role'] ?? UserRole::USER),
+            (int) ($_POST['foyer_id'] ?? 0)
         );
         if (is_int($result)) {
             $success = 'Compte créé.';
+        } else {
+            $error = (string) $result;
+        }
+    } elseif ($action === 'assign_foyer') {
+        $result = $foyerRepo->assignUser(
+            (int) ($_POST['user_id'] ?? 0),
+            (int) ($_POST['foyer_id'] ?? 0)
+        );
+        if ($result === true) {
+            $success = 'Foyer mis à jour pour ce compte.';
         } else {
             $error = (string) $result;
         }
@@ -60,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     . (string) ($target['nom'] ?? '')
                     . ' » : '
                     . $result['password']
-                    . ' — communiquez-le une seule fois, puis demandez à la personne de le changer dans Mon compte.';
+                    . ' — communiquez-le une seule fois.';
             } else {
                 $error = (string) $result;
             }
@@ -75,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result === true) {
                 $success = 'Compte supprimé.';
                 if ($libraryCount > 0) {
-                    $success .= ' ' . $libraryCount . ' entrée(s) bibliothèque retirée(s).';
+                    $success .= ' ' . $libraryCount . ' entrée(s) personnelle(s) retirée(s).';
                 }
             } else {
                 $error = (string) $result;
@@ -87,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 View::render('utilisateurs', [
     'pageTitle' => 'Comptes utilisateurs',
     'users' => $repo->listAll(),
+    'foyers' => $foyerRepo->listAll(),
     'error' => $error,
     'success' => $success,
     'currentUserId' => Auth::currentUserId(),

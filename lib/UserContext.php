@@ -2,7 +2,7 @@
 /**
  * Utilisateur courant (session de connexion).
  *
- * Point d’accès pour le code métier (films, envies…) : quel user_id utiliser dans bibliotheque.
+ * Point d’accès pour le code métier : quel user_id / foyer_id utiliser.
  * Délègue à Auth ; redirige vers la connexion si personne n’est connecté.
  */
 
@@ -31,7 +31,31 @@ final class UserContext
         exit;
     }
 
+    /** ID du foyer de l’utilisateur connecté (collection partagée). */
+    public static function currentFoyerId(): int
+    {
+        $userId = Auth::currentUserId();
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        static $cache = [];
+        if (isset($cache[$userId])) {
+            return $cache[$userId];
+        }
+
+        $foyerId = (new FoyerRepository())->currentFoyerIdForUser($userId);
+        $cache[$userId] = $foyerId;
+
+        return $foyerId;
+    }
+
     public static function canManageCatalog(): bool
+    {
+        return Auth::isAdmin();
+    }
+
+    public static function canManageFoyers(): bool
     {
         return Auth::isAdmin();
     }

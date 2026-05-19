@@ -223,7 +223,11 @@ final class ImportRunner
         $oeuvreId = (int) ($parsed['oeuvre_id'] ?? 0);
         if ($oeuvreId > 0 && $this->films->usesCatalogModel()) {
             $repo = new CatalogFilmRepository();
-            $library = (new BibliothequeRepository())->findByOeuvreId($oeuvreId, UserContext::currentUserId());
+            $library = (new BibliothequeRepository())->findByOeuvreId(
+                $oeuvreId,
+                UserContext::currentUserId(),
+                UserContext::currentFoyerId()
+            );
             if ($library !== null) {
                 return $repo->findById((int) $library['id']);
             }
@@ -308,7 +312,8 @@ final class ImportRunner
                 if ($this->films->usesCatalogModel()) {
                     $library = (new BibliothequeRepository())->findByOeuvreId(
                         $oeuvreId,
-                        UserContext::currentUserId()
+                        UserContext::currentUserId(),
+                        UserContext::currentFoyerId()
                     );
                     if ($library !== null) {
                         return (new CatalogFilmRepository())->findById((int) $library['id']);

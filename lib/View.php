@@ -36,6 +36,7 @@ final class View
             'sagas',
             'statistiques',
             'catalogue',
+            'maintenance-catalogue',
         ], true);
     }
 

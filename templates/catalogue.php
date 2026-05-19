@@ -284,6 +284,7 @@ $pageUrl = static function (int $targetPage) use ($search, $sortBy, $sortDir): s
 
     <p class="collection-page__footer-links">
         <a href="/films.php">← Mes films</a>
+        <a href="/maintenance-catalogue.php">Maintenance catalogue</a>
         <a href="/ajouter-film.php">Ajouter à ma bibliothèque</a>
         <a href="/import.php">Importer / exporter (catalogue)</a>
     </p>

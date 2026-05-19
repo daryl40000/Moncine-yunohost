@@ -26,15 +26,12 @@
             <?php $sortHeader('Style', 'styles'); ?>
             <th>Saga</th>
             <?php $sortHeader('Support', 'support_physique'); ?>
-            <?php $sortHeader('Note', 'note'); ?>
+            <?php $sortHeader('Notes', 'note'); ?>
             <?php $sortHeader('Dernière vue', 'derniere_vue'); ?>
         </tr>
     </thead>
     <tbody>
         <?php foreach ($films as $film):
-            $noteRaw = $film['note_max'] ?? null;
-            $noteInt = $noteRaw !== null && $noteRaw !== '' ? (int) $noteRaw : null;
-            $noteLabel = Moncine\HistoriqueRepository::formatNoteSur10($noteInt);
             $sagaLabel = trim((string) ($film['saga'] ?? ''));
             $filmId = (int) $film['id'];
             $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null);
@@ -89,7 +86,7 @@
                     <?php endif; ?>
                 </td>
                 <td><?php $supportKey = (string) ($film['support_physique'] ?? ''); require MONCINE_ROOT . '/templates/_support_link.php'; ?></td>
-                <td><?= $noteLabel !== '' ? Moncine\View::escape($noteLabel) : '—' ?></td>
+                <td><?php $showFoyerAverage = true; $layout = 'stacked'; require MONCINE_ROOT . '/templates/_film_ratings.php'; ?></td>
                 <td><?= $film['derniere_vue']
                     ? Moncine\View::escape(Moncine\HistoriqueRepository::formatDateVue((string) $film['derniere_vue']))
                     : '—' ?></td>

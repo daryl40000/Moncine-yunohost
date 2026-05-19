@@ -17,7 +17,7 @@ final class UtilisateurRepository
   /** Limite pour éviter les abus (charge CPU du hachage). */
     public const MAX_PASSWORD_LENGTH = 128;
 
-    private const PUBLIC_COLUMNS = 'id, nom, email, role, actif, last_login_at, created_at';
+    private const PUBLIC_COLUMNS = 'id, nom, email, role, actif, foyer_id, last_login_at, created_at';
 
     private PDO $db;
 
@@ -83,12 +83,15 @@ final class UtilisateurRepository
     public function listAll(): array
     {
         return $this->db->query(
-            'SELECT id, nom, email, role, actif, last_login_at, created_at
-             FROM utilisateurs ORDER BY role DESC, nom COLLATE FRENCH_NOCASE'
+            'SELECT u.id, u.nom, u.email, u.role, u.actif, u.foyer_id, u.last_login_at, u.created_at,
+                    f.nom AS foyer_nom
+             FROM utilisateurs u
+             LEFT JOIN foyers f ON f.id = u.foyer_id
+             ORDER BY u.role DESC, u.nom COLLATE FRENCH_NOCASE'
         )->fetchAll();
     }
 
-    public function create(string $nom, string $email, string $plainPassword, string $role): int|string
+    public function create(string $nom, string $email, string $plainPassword, string $role, int $foyerId = 0): int|string
     {
         $nom = trim($nom);
         $email = mb_strtolower(trim($email), 'UTF-8');
@@ -108,10 +111,19 @@ final class UtilisateurRepository
             return self::passwordValidationMessage();
         }
 
+        if ($foyerId <= 0) {
+            $foyers = (new FoyerRepository())->listAll();
+            if ($foyers !== []) {
+                $foyerId = (int) ($foyers[0]['id'] ?? 0);
+            }
+        } elseif ((new FoyerRepository())->findById($foyerId) === null) {
+            return 'Foyer introuvable.';
+        }
+
         $this->db->prepare(
-            'INSERT INTO utilisateurs (nom, email, password_hash, role, actif, created_at)
-             VALUES (?, ?, ?, ?, 1, datetime(\'now\'))'
-        )->execute([$nom, $email, $hash, $role]);
+            'INSERT INTO utilisateurs (nom, email, password_hash, role, actif, foyer_id, created_at)
+             VALUES (?, ?, ?, ?, 1, ?, datetime(\'now\'))'
+        )->execute([$nom, $email, $hash, $role, $foyerId > 0 ? $foyerId : null]);
 
         return (int) $this->db->lastInsertId();
     }
@@ -137,6 +149,11 @@ final class UtilisateurRepository
 
                 return $result;
             }
+
+            if (FoyerRepository::tableExists($this->db)) {
+                (new FoyerRepository())->createDefaultForUser($result);
+            }
+
             $this->db->commit();
 
             return $result;
@@ -216,10 +233,23 @@ final class UtilisateurRepository
         if ($userId <= 0) {
             return 0;
         }
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM bibliotheque WHERE user_id = ?');
-        $stmt->execute([$userId]);
+        $foyerId = (new FoyerRepository())->currentFoyerIdForUser($userId);
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM bibliotheque WHERE user_id = ? AND statut = ?'
+        );
+        $stmt->execute([$userId, LibraryStatut::WISHLIST]);
+        $wishlist = (int) $stmt->fetchColumn();
 
-        return (int) $stmt->fetchColumn();
+        if ($foyerId <= 0) {
+            return $wishlist;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM bibliotheque WHERE foyer_id = ? AND statut = ?'
+        );
+        $stmt->execute([$foyerId, LibraryStatut::COLLECTION]);
+
+        return $wishlist + (int) $stmt->fetchColumn();
     }
 
     /**
@@ -244,7 +274,10 @@ final class UtilisateurRepository
 
         $this->db->beginTransaction();
         try {
-            $this->db->prepare('DELETE FROM bibliotheque WHERE user_id = ?')->execute([$id]);
+            $this->db->prepare('DELETE FROM historique WHERE user_id = ?')->execute([$id]);
+            $this->db->prepare(
+                'DELETE FROM bibliotheque WHERE user_id = ? AND statut = ?'
+            )->execute([$id, LibraryStatut::WISHLIST]);
             $stmt = $this->db->prepare('DELETE FROM utilisateurs WHERE id = ?');
             $stmt->execute([$id]);
             if ($stmt->rowCount() < 1) {

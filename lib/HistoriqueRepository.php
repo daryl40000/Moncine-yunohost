@@ -1,6 +1,6 @@
 <?php
 /**
- * Historique des films déjà vus.
+ * Historique des films déjà vus (personnel à chaque utilisateur).
  */
 
 declare(strict_types=1);
@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Moncine;
 
 use PDO;
+use PDOException;
 
 final class HistoriqueRepository
 {
@@ -23,22 +24,16 @@ final class HistoriqueRepository
         $this->recordViewing($filmId, date('Y-m-d'), $note);
     }
 
-    /** Date du jour au format jj/mm/aaaa (affichage). */
     public static function todayForInput(): string
     {
         return date('d/m/Y');
     }
 
-    /** Date du jour au format aaaa-mm-jj (champ HTML date). */
     public static function todayForInputIso(): string
     {
         return date('Y-m-d');
     }
 
-    /**
-     * Convertit une date saisie en aaaa-mm-jj (SQLite).
-     * Formats : aaaa-mm-jj, jj/mm/aaaa, jj-mm-aaaa, jj.mm.aaaa.
-     */
     public static function parseVueDate(string $raw): ?string
     {
         $raw = trim($raw);
@@ -63,11 +58,7 @@ final class HistoriqueRepository
         return null;
     }
 
-    /**
-     * Valide une date saisie. Vide = aujourd’hui.
-     *
-     * @return array{ok: true, date: string}|array{ok: false, error: string}
-     */
+    /** @return array{ok: true, date: string}|array{ok: false, error: string} */
     public static function parseDateVueInput(string $raw): array
     {
         $raw = trim($raw);
@@ -93,11 +84,7 @@ final class HistoriqueRepository
         return ['ok' => true, 'date' => $iso];
     }
 
-    /**
-     * Note sur 10 (optionnelle). Vide = pas de note.
-     *
-     * @return array{ok: true, note: ?int}|array{ok: false, error: string}
-     */
+    /** @return array{ok: true, note: ?int}|array{ok: false, error: string} */
     public static function parseNoteInput(string $raw): array
     {
         $raw = trim($raw);
@@ -123,44 +110,40 @@ final class HistoriqueRepository
         return ['ok' => true, 'note' => $note];
     }
 
-    /**
-     * Enregistre une vision (import CSV ou bouton « vu ce soir »).
-     * Met à jour la note si la même date existe déjà.
-     */
     public function recordViewing(int $filmId, string $dateVue, ?int $note = null): bool
     {
-        if (!$this->libraryEntryExists($filmId)) {
+        $userId = UserContext::currentUserId();
+        if (!$this->libraryEntryExists($filmId, $userId)) {
             throw new \RuntimeException('Cette fiche est introuvable dans votre bibliothèque.');
         }
 
         $check = $this->db->prepare(
-            'SELECT id FROM historique WHERE film_id = ? AND date_vue = ?'
+            'SELECT id FROM historique WHERE film_id = ? AND user_id = ? AND date_vue = ?'
         );
-        $check->execute([$filmId, $dateVue]);
+        $check->execute([$filmId, $userId, $dateVue]);
         $existingId = $check->fetchColumn();
 
         if ($existingId !== false) {
             if ($note !== null) {
-                $upd = $this->db->prepare(
-                    'UPDATE historique SET note = ? WHERE id = ?'
-                );
+                $upd = $this->db->prepare('UPDATE historique SET note = ? WHERE id = ?');
                 $upd->execute([$note, $existingId]);
             }
+
             return false;
         }
 
         try {
             $stmt = $this->db->prepare(
-                'INSERT INTO historique (film_id, date_vue, note) VALUES (?, ?, ?)'
+                'INSERT INTO historique (film_id, user_id, date_vue, note) VALUES (?, ?, ?, ?)'
             );
-            $stmt->execute([$filmId, $dateVue, $note]);
+            $stmt->execute([$filmId, $userId, $dateVue, $note]);
         } catch (PDOException $e) {
             if ($this->isForeignKeyFailure($e)) {
                 HistoriqueSchema::repairForeignKeyIfNeeded($this->db);
                 $stmt = $this->db->prepare(
-                    'INSERT INTO historique (film_id, date_vue, note) VALUES (?, ?, ?)'
+                    'INSERT INTO historique (film_id, user_id, date_vue, note) VALUES (?, ?, ?, ?)'
                 );
-                $stmt->execute([$filmId, $dateVue, $note]);
+                $stmt->execute([$filmId, $userId, $dateVue, $note]);
             } else {
                 throw $e;
             }
@@ -169,17 +152,29 @@ final class HistoriqueRepository
         return true;
     }
 
-    private function libraryEntryExists(int $filmId): bool
+    private function libraryEntryExists(int $filmId, int $userId): bool
     {
         if ($filmId <= 0) {
             return false;
         }
 
         if (CatalogSchema::usesCatalogTables($this->db)) {
+            $foyerId = UserContext::currentFoyerId();
             $stmt = $this->db->prepare(
-                'SELECT 1 FROM bibliotheque WHERE id = ? AND user_id = ? LIMIT 1'
+                'SELECT 1 FROM bibliotheque WHERE id = ?
+                 AND (
+                    (statut = ? AND foyer_id = ?)
+                    OR (statut = ? AND user_id = ?)
+                 )
+                 LIMIT 1'
             );
-            $stmt->execute([$filmId, UserContext::currentUserId()]);
+            $stmt->execute([
+                $filmId,
+                LibraryStatut::COLLECTION,
+                $foyerId,
+                LibraryStatut::WISHLIST,
+                $userId,
+            ]);
 
             return (bool) $stmt->fetchColumn();
         }
@@ -198,62 +193,67 @@ final class HistoriqueRepository
 
     public function wasEverSeen(int $filmId): bool
     {
-        $stmt = $this->db->prepare('SELECT 1 FROM historique WHERE film_id = ? LIMIT 1');
-        $stmt->execute([$filmId]);
+        $userId = UserContext::currentUserId();
+        $stmt = $this->db->prepare(
+            'SELECT 1 FROM historique WHERE film_id = ? AND user_id = ? LIMIT 1'
+        );
+        $stmt->execute([$filmId, $userId]);
+
         return (bool) $stmt->fetchColumn();
     }
 
-    /** @return list<array{id: int, date_vue: string, note: ?int}> Toutes les visions d’un film. */
+    /** @return list<array{id: int, date_vue: string, note: ?int}> */
     public function findViewingsByFilm(int $filmId): array
     {
+        $userId = UserContext::currentUserId();
         $stmt = $this->db->prepare(
             'SELECT id, date_vue, note FROM historique
-             WHERE film_id = ?
+             WHERE film_id = ? AND user_id = ?
              ORDER BY date_vue DESC, id DESC'
         );
-        $stmt->execute([$filmId]);
+        $stmt->execute([$filmId, $userId]);
 
         return $stmt->fetchAll();
     }
 
-    /** Supprime une entrée d’historique (vérifie qu’elle appartient au film). */
     public function deleteViewing(int $historiqueId, int $filmId): bool
     {
         if ($historiqueId <= 0 || $filmId <= 0) {
             return false;
         }
 
+        $userId = UserContext::currentUserId();
         $stmt = $this->db->prepare(
-            'DELETE FROM historique WHERE id = ? AND film_id = ?'
+            'DELETE FROM historique WHERE id = ? AND film_id = ? AND user_id = ?'
         );
-        $stmt->execute([$historiqueId, $filmId]);
+        $stmt->execute([$historiqueId, $filmId, $userId]);
 
         return $stmt->rowCount() > 0;
     }
 
-    /** Vision la plus récente (date la plus élevée en base). */
     public function getLastViewing(int $filmId): ?array
     {
+        $userId = UserContext::currentUserId();
         $stmt = $this->db->prepare(
             'SELECT date_vue, note FROM historique
-             WHERE film_id = ?
+             WHERE film_id = ? AND user_id = ?
              ORDER BY date_vue DESC, id DESC
              LIMIT 1'
         );
-        $stmt->execute([$filmId]);
+        $stmt->execute([$filmId, $userId]);
         $row = $stmt->fetch();
 
         return $row ?: null;
     }
 
-    /** Meilleure note enregistrée pour ce film (1 à 10), ou null si jamais noté. */
     public function getNoteSur10(int $filmId): ?int
     {
+        $userId = UserContext::currentUserId();
         $stmt = $this->db->prepare(
             'SELECT MAX(note) FROM historique
-             WHERE film_id = ? AND note IS NOT NULL AND note >= 1'
+             WHERE film_id = ? AND user_id = ? AND note IS NOT NULL AND note >= 1'
         );
-        $stmt->execute([$filmId]);
+        $stmt->execute([$filmId, $userId]);
         $note = $stmt->fetchColumn();
         if ($note === false || $note === null) {
             return null;
@@ -263,7 +263,41 @@ final class HistoriqueRepository
         return $n >= 1 ? min(10, $n) : null;
     }
 
-    /** Affichage « 8/10 » pour la fiche film. */
+    /** Moyenne des meilleures notes des membres du foyer pour ce film. */
+    public function getFoyerAverageNote(int $filmId): ?float
+    {
+        if (!CatalogSchema::usesFoyerModel($this->db)) {
+            return null;
+        }
+
+        $foyerId = UserContext::currentFoyerId();
+        if ($foyerId <= 0 || $filmId <= 0) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT ROUND(AVG(member_note.best_note), 2)
+             FROM (
+                 SELECT MAX(h.note) AS best_note
+                 FROM historique h
+                 INNER JOIN utilisateurs u ON u.id = h.user_id
+                 WHERE h.film_id = ?
+                   AND u.foyer_id = ?
+                   AND h.note IS NOT NULL AND h.note >= 1 AND h.note <= 10
+                 GROUP BY h.user_id
+             ) member_note'
+        );
+        $stmt->execute([$filmId, $foyerId]);
+        $value = $stmt->fetchColumn();
+        if ($value === false || $value === null) {
+            return null;
+        }
+
+        $average = (float) $value;
+
+        return $average >= 1 ? min(10.0, $average) : null;
+    }
+
     public static function formatNoteSur10(?int $note): string
     {
         if ($note === null || $note < 1) {
@@ -273,7 +307,15 @@ final class HistoriqueRepository
         return min(10, $note) . '/10';
     }
 
-    /** Affiche une date de vision en jj-mm-aaaa (ex. 16-05-2026). */
+    public static function formatAverageNote(?float $note): string
+    {
+        if ($note === null || $note < 1) {
+            return '';
+        }
+
+        return number_format(min(10.0, $note), 1, ',', ' ') . '/10';
+    }
+
     public static function formatDateVue(?string $date): string
     {
         if ($date === null || trim($date) === '') {
@@ -296,19 +338,20 @@ final class HistoriqueRepository
         return $date;
     }
 
-    /** @return list<array<string, mixed>> Toutes les visions, avec titre du film. */
+    /** @return list<array<string, mixed>> */
     public function findAllWithFilmTitles(): array
     {
+        $userId = UserContext::currentUserId();
         if (CatalogSchema::usesCatalogTables($this->db)) {
             $stmt = $this->db->prepare(
                 'SELECT h.id, h.film_id, b.oeuvre_id, o.titre, o.realisateur, h.date_vue, h.note
                  FROM historique h
                  INNER JOIN bibliotheque b ON b.id = h.film_id
                  INNER JOIN oeuvres o ON o.id = b.oeuvre_id
-                 WHERE b.user_id = ?
+                 WHERE h.user_id = ?
                  ORDER BY h.date_vue DESC, o.titre COLLATE FRENCH_NOCASE'
             );
-            $stmt->execute([UserContext::currentUserId()]);
+            $stmt->execute([$userId]);
 
             return $stmt->fetchAll();
         }
@@ -323,14 +366,16 @@ final class HistoriqueRepository
         return $stmt->fetchAll();
     }
 
-    /** Nombre de jours depuis la dernière vision (null si jamais vu). */
     public function daysSinceLastView(int $filmId): ?int
     {
+        $userId = UserContext::currentUserId();
         $stmt = $this->db->prepare(
-            'SELECT CAST(julianday("now") - julianday(MAX(date_vue)) AS INTEGER) FROM historique WHERE film_id = ?'
+            'SELECT CAST(julianday("now") - julianday(MAX(date_vue)) AS INTEGER)
+             FROM historique WHERE film_id = ? AND user_id = ?'
         );
-        $stmt->execute([$filmId]);
+        $stmt->execute([$filmId, $userId]);
         $days = $stmt->fetchColumn();
+
         return $days !== false ? (int) $days : null;
     }
 }

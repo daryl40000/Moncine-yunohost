@@ -1,6 +1,7 @@
 <?php
 /**
  * @var list<array<string, mixed>> $users
+ * @var list<array<string, mixed>> $foyers
  * @var string $error
  * @var string $success
  * @var int $currentUserId
@@ -8,7 +9,10 @@
 ?>
 <section class="users-admin-page">
     <h1>Comptes utilisateurs</h1>
-    <p class="lead">Réservé aux administrateurs. Chaque personne a sa bibliothèque et ses envies.</p>
+    <p class="lead">
+        Les membres d’un même <a href="/foyers.php">foyer</a> partagent la collection ;
+        leurs envies et notes restent personnelles.
+    </p>
 
     <?php if ($success !== ''): ?>
         <p class="alert alert-success"><?= Moncine\View::escape($success) ?></p>
@@ -23,19 +27,23 @@
             <form method="post" action="/utilisateurs.php" class="import-form auth-form">
                 <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                 <input type="hidden" name="action" value="create">
-
                 <label for="new_nom">Nom</label>
                 <input type="text" name="nom" id="new_nom" required>
-
                 <label for="new_email">E-mail</label>
                 <input type="email" name="email" id="new_email" required>
-
                 <label for="new_password">Mot de passe provisoire</label>
                 <input type="password" name="password" id="new_password" required
                        minlength="<?= Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH ?>"
                        maxlength="<?= Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH ?>"
                        autocomplete="new-password">
-
+                <label for="new_foyer">Foyer</label>
+                <select name="foyer_id" id="new_foyer">
+                    <?php foreach ($foyers as $foyer): ?>
+                        <option value="<?= (int) ($foyer['id'] ?? 0) ?>">
+                            <?= Moncine\View::escape((string) ($foyer['nom'] ?? '')) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 <label for="new_role">Rôle</label>
                 <select name="role" id="new_role">
                     <option value="<?= Moncine\View::escape(Moncine\UserRole::USER) ?>">
@@ -45,7 +53,6 @@
                         <?= Moncine\View::escape(Moncine\UserRole::label(Moncine\UserRole::ADMIN)) ?>
                     </option>
                 </select>
-
                 <button type="submit" class="btn btn-primary">Créer le compte</button>
             </form>
         </div>
@@ -58,6 +65,7 @@
                 <tr>
                     <th>Nom</th>
                     <th>E-mail</th>
+                    <th>Foyer</th>
                     <th>Rôle</th>
                     <th>Statut</th>
                     <th>Actions</th>
@@ -67,10 +75,28 @@
                 <?php foreach ($users as $user):
                     $uid = (int) ($user['id'] ?? 0);
                     $active = (int) ($user['actif'] ?? 0) === 1;
+                    $userFoyerId = (int) ($user['foyer_id'] ?? 0);
                     ?>
                     <tr>
                         <td><?= Moncine\View::escape((string) ($user['nom'] ?? '')) ?></td>
                         <td><?= Moncine\View::escape((string) ($user['email'] ?? '')) ?></td>
+                        <td>
+                            <form method="post" action="/utilisateurs.php" class="inline-form">
+                                <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                                <input type="hidden" name="action" value="assign_foyer">
+                                <input type="hidden" name="user_id" value="<?= $uid ?>">
+                                <select name="foyer_id">
+                                    <?php foreach ($foyers as $foyer):
+                                        $fid = (int) ($foyer['id'] ?? 0);
+                                        ?>
+                                        <option value="<?= $fid ?>"<?= $fid === $userFoyerId ? ' selected' : '' ?>>
+                                            <?= Moncine\View::escape((string) ($foyer['nom'] ?? '')) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="submit" class="btn btn-secondary btn-sm">OK</button>
+                            </form>
+                        </td>
                         <td><?= Moncine\View::escape(Moncine\UserRole::label((string) ($user['role'] ?? ''))) ?></td>
                         <td><?= $active ? 'Actif' : 'Désactivé' ?></td>
                         <td class="users-admin-page__actions">
@@ -85,14 +111,14 @@
                                     </button>
                                 </form>
                                 <form method="post" action="/utilisateurs.php" class="inline-form users-admin-page__action-form"
-                                      onsubmit="return confirm('Générer un nouveau mot de passe provisoire pour ce compte ?');">
+                                      onsubmit="return confirm('Générer un mot de passe provisoire ?');">
                                     <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                                     <input type="hidden" name="action" value="reset_password">
                                     <input type="hidden" name="user_id" value="<?= $uid ?>">
                                     <button type="submit" class="btn btn-secondary btn-sm">Réinit. MDP</button>
                                 </form>
                                 <form method="post" action="/utilisateurs.php" class="inline-form users-admin-page__action-form"
-                                      onsubmit="return confirm('Supprimer définitivement ce compte et toute sa bibliothèque (films, envies, historique) ?');">
+                                      onsubmit="return confirm('Supprimer ce compte ?');">
                                     <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="user_id" value="<?= $uid ?>">
@@ -109,6 +135,6 @@
     </div>
 
     <p class="collection-page__footer-links">
-        <a href="/">← Accueil</a>
+        <a href="/foyers.php">Gérer les foyers</a> · <a href="/">Accueil</a>
     </p>
 </section>

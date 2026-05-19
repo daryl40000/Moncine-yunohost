@@ -35,6 +35,7 @@ $historique = new HistoriqueRepository();
 $lastViewing = $historique->getLastViewing($id);
 $derniereVue = $lastViewing['date_vue'] ?? null;
 $noteSur10 = $historique->getNoteSur10($id);
+$noteFoyerMoyenne = $historique->getFoyerAverageNote($id);
 $viewings = $historique->findViewingsByFilm($id);
 
 $enrichStatus = null;
@@ -60,6 +61,7 @@ View::render('film', [
     'film' => $film,
     'derniereVue' => $derniereVue,
     'noteSur10' => $noteSur10,
+    'noteFoyerMoyenne' => $noteFoyerMoyenne,
     'viewings' => $viewings,
     'saved' => isset($_GET['saved']),
     'saveError' => $saveError,

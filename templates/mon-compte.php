@@ -1,6 +1,7 @@
 <?php
 /**
  * @var array<string, mixed> $user
+ * @var array<string, mixed>|null $foyer
  * @var string $error
  * @var string $success
  */
@@ -34,6 +35,10 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
                        value="<?= Moncine\View::escape((string) ($user['email'] ?? '')) ?>">
 
                 <p class="hint">Rôle : <?= Moncine\View::escape(Moncine\UserRole::label((string) ($user['role'] ?? ''))) ?></p>
+                <?php if ($foyer !== null): ?>
+                    <p class="hint">Foyer : <?= Moncine\View::escape((string) ($foyer['nom'] ?? '')) ?>
+                        — collection partagée avec les autres membres.</p>
+                <?php endif; ?>
 
                 <button type="submit" class="btn btn-primary">Enregistrer le profil</button>
             </form>

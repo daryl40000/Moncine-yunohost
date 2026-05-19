@@ -165,10 +165,23 @@
                         ? Moncine\View::escape(Moncine\HistoriqueRepository::formatDateVue((string) $derniereVue))
                         : 'Jamais' ?></dd>
 
-                    <?php if (!empty($noteSur10)): ?>
-                        <dt>Note</dt>
+                    <?php if (!empty($noteSur10) || ($noteFoyerMoyenne ?? null) !== null): ?>
+                        <dt>Notes</dt>
                         <dd>
-                            <span class="film-note" title="Votre note sur ce film"><?= (int) $noteSur10 ?>/10</span>
+                            <?php if (!empty($noteSur10)): ?>
+                                <p class="film-ratings film-ratings--detail">
+                                    <span class="film-ratings__label">Votre note</span>
+                                    <span class="film-note" title="Votre meilleure note sur ce film"><?= (int) $noteSur10 ?>/10</span>
+                                </p>
+                            <?php endif; ?>
+                            <?php if (!empty($noteFoyerMoyenne)): ?>
+                                <p class="film-ratings film-ratings--detail">
+                                    <span class="film-ratings__label">Moyenne du foyer</span>
+                                    <span class="film-note film-note--foyer" title="Note moyenne des membres du foyer">
+                                        <?= Moncine\View::escape(Moncine\HistoriqueRepository::formatAverageNote($noteFoyerMoyenne)) ?>
+                                    </span>
+                                </p>
+                            <?php endif; ?>
                         </dd>
                     <?php endif; ?>
 
