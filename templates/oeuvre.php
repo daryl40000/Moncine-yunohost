@@ -123,6 +123,9 @@
                 <?php if (!empty($saved)): ?>
                     <p class="alert alert-success">Modifications enregistrées.</p>
                 <?php endif; ?>
+                <?php if (!empty($posterUploaded)): ?>
+                    <p class="alert alert-success">Affiche enregistrée.</p>
+                <?php endif; ?>
 
                 <?php
                 $editOpen = $editOpen ?? false;
@@ -132,6 +135,12 @@
                 $catalogDir = $catalogDir ?? 'asc';
                 $catalogPage = (int) ($catalogPage ?? 1);
                 require MONCINE_ROOT . '/templates/_oeuvre_edit_form.php';
+                ?>
+
+                <?php
+                $posterUploadError = $posterUploadError ?? '';
+                $posterUploadOpen = $posterUploadOpen ?? false;
+                require MONCINE_ROOT . '/templates/_oeuvre_poster_upload_form.php';
                 ?>
 
                 <?php

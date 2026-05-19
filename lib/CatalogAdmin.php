@@ -183,6 +183,47 @@ final class CatalogAdmin
     }
 
     /**
+     * Enregistre une affiche depuis un fichier image envoyé par l’administrateur.
+     *
+     * @return true|string true si OK, sinon message d’erreur
+     */
+    public function uploadPosterFile(int $oeuvreId, string $tmpPath, int $fileSize): bool|string
+    {
+        if ($oeuvreId <= 0) {
+            return 'Œuvre invalide.';
+        }
+
+        if ($this->oeuvres->findById($oeuvreId) === null) {
+            return 'Œuvre introuvable.';
+        }
+
+        $maxBytes = defined('MONCINE_POSTER_MAX_BYTES') ? (int) MONCINE_POSTER_MAX_BYTES : 2_097_152;
+        if ($fileSize <= 0 || $fileSize > $maxBytes) {
+            $maxMo = (int) ceil($maxBytes / 1024 / 1024);
+
+            return 'Image trop volumineuse (maximum ' . $maxMo . ' Mo).';
+        }
+
+        if ($tmpPath === '' || !is_readable($tmpPath)) {
+            return 'Impossible de lire le fichier envoyé.';
+        }
+
+        $binary = file_get_contents($tmpPath);
+        if ($binary === false || $binary === '') {
+            return 'Impossible de lire le fichier envoyé.';
+        }
+
+        $local = (new PosterStorage())->importBinaryForOeuvre($oeuvreId, $binary);
+        if ($local === '') {
+            return 'Format non reconnu. Utilisez une image JPEG, PNG ou WebP.';
+        }
+
+        $this->oeuvres->update($oeuvreId, ['poster_url' => $local], ['poster_url']);
+
+        return true;
+    }
+
+    /**
      * Import / mise à jour d’une œuvre catalogue depuis un export admin.
      *
      * @param array<string, mixed> $data

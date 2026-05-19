@@ -53,7 +53,17 @@ if (isset($_GET['enrich'])) {
 }
 
 $saveError = (string) ($_GET['save_error'] ?? '');
+$posterUploadError = (string) ($_GET['poster_error'] ?? '');
 $editOpen = isset($_GET['edit']) || $saveError !== '';
+$posterUploadOpen = $posterUploadError !== '';
+
+if (isset($_GET['poster_uploaded']) && (string) $_GET['poster_uploaded'] === '1') {
+    $refreshed = $admin->findOeuvreDetail($oeuvreId);
+    if ($refreshed !== null) {
+        $oeuvre = $refreshed['oeuvre'];
+        $detail = $refreshed;
+    }
+}
 
 View::render('oeuvre', [
     'pageTitle' => (string) ($oeuvre['titre'] ?? 'Œuvre catalogue'),
@@ -68,7 +78,10 @@ View::render('oeuvre', [
     'oeuvreId' => $oeuvreId,
     'saved' => isset($_GET['saved']) && (string) $_GET['saved'] === '1',
     'saveError' => $saveError,
+    'posterUploadError' => $posterUploadError,
+    'posterUploaded' => isset($_GET['poster_uploaded']) && (string) $_GET['poster_uploaded'] === '1',
     'editOpen' => $editOpen,
+    'posterUploadOpen' => $posterUploadOpen,
     'hasTmdbKey' => TmdbConfig::hasApiKey(),
     'enrichStatus' => $enrichStatus,
     'enrichMessage' => $enrichMessage,

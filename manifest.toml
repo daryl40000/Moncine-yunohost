@@ -8,7 +8,7 @@ name = "Moncine"
 description.fr = "Dvdthèque personnelle : collection, envies, choix du film du soir"
 description.en = "Personal movie library: collection, wishlist, evening picker"
 
-version = "0.6.0~ynh1"
+version = "0.7.0~ynh1"
 
 maintainers = ["Stéphane MATER"]
 
