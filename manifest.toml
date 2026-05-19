@@ -8,14 +8,14 @@ name = "Moncine"
 description.fr = "Dvdthèque personnelle : collection, envies, choix du film du soir"
 description.en = "Personal movie library: collection, wishlist, evening picker"
 
-version = "2.1.0~ynh1"
+version = "0.5.0~ynh1"
 
 maintainers = ["Stéphane MATER"]
 
 [upstream]
 license = "GPL-3.0-or-later"
-website = "https://github.com/stephane/Moncine"
-code = "https://github.com/stephane/Moncine"
+website = "https://github.com/daryl40000/Moncine"
+code = "https://github.com/daryl40000/Moncine"
 
 [integration]
 yunohost = ">= 12.1.17"
