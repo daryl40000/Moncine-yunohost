@@ -1,0 +1,25 @@
+#!/bin/bash
+# Mise à jour Moncine — paquet YunoHost
+
+set -euo pipefail
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Mise à jour de ${app}…"
+
+ynh_app_setting_set --key=php_upload_max_filesize --value=85M
+ynh_app_setting_set --key=php_post_max_size --value=85M
+
+ynh_script_progression "Mise à jour des fichiers de l'application…"
+moncine_copy_sources "${install_dir}"
+chown -R "${app}:www-data" "${install_dir}"
+
+ynh_script_progression "Migrations SQL…"
+moncine_run_migrate
+
+ynh_script_progression "Reconfiguration PHP-FPM et NGINX…"
+ynh_config_add_phpfpm
+ynh_config_add_nginx
+
+ynh_script_progression "Mise à jour de ${app} terminée."

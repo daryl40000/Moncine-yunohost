@@ -1,0 +1,17 @@
+#!/bin/bash
+# Sauvegarde Moncine — paquet YunoHost
+
+set -euo pipefail
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_print_info "Déclaration des éléments à sauvegarder pour ${app}…"
+
+ynh_backup "${install_dir}"
+ynh_backup "${data_dir}"
+
+ynh_backup "/etc/php/${php_version}/fpm/pool.d/${app}.conf"
+ynh_backup "/etc/nginx/conf.d/${domain}.d/${app}.conf"
+
+ynh_print_info "Script de sauvegarde ${app} terminé."

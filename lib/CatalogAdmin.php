@@ -1,0 +1,374 @@
+<?php
+/**
+ * Gestion du catalogue partagé (œuvres) — réservé à l’administrateur à terme.
+ */
+
+declare(strict_types=1);
+
+namespace Moncine;
+
+use PDO;
+
+final class CatalogAdmin
+{
+    private const PER_PAGE = 40;
+
+    private OeuvreRepository $oeuvres;
+
+    private PDO $db;
+
+    public function __construct()
+    {
+        $this->db = Database::getInstance();
+        $this->oeuvres = new OeuvreRepository();
+    }
+
+    /** Accès à la page catalogue (mono-utilisateur : utilisateur principal). */
+    public static function canAccess(): bool
+    {
+        if (!CatalogSchema::usesCatalogTables(Database::getInstance())) {
+            return false;
+        }
+
+        return UserContext::canManageCatalog();
+    }
+
+    public static function denyUnlessAccess(): void
+    {
+        if (!self::canAccess()) {
+            header('Location: /');
+            exit;
+        }
+    }
+
+    public static function perPage(): int
+    {
+        return self::PER_PAGE;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listOeuvres(
+        string $search,
+        string $sortBy,
+        string $sortDir,
+        int $page
+    ): array {
+        [$sqlSort, $direction] = $this->resolveSort($sortBy, $sortDir);
+        $page = max(1, $page);
+        $offset = ($page - 1) * self::PER_PAGE;
+
+        [$whereSql, $params] = $this->searchWhere($search);
+        $sql = 'SELECT o.*, (
+                    SELECT COUNT(*) FROM bibliotheque b WHERE b.oeuvre_id = o.id
+                ) AS library_count
+                FROM oeuvres o'
+            . $whereSql
+            . ' ORDER BY ' . $sqlSort . ' ' . $direction
+            . ' LIMIT ' . self::PER_PAGE . ' OFFSET ' . $offset;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
+    public function countOeuvres(string $search): int
+    {
+        [$whereSql, $params] = $this->searchWhere($search);
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM oeuvres o' . $whereSql);
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Fiche catalogue + lien bibliothèque de l’utilisateur courant (s’il existe).
+     *
+     * @return array{oeuvre: array<string, mixed>, library: ?array<string, mixed>, library_count: int}|null
+     */
+    public function findOeuvreDetail(int $oeuvreId): ?array
+    {
+        if ($oeuvreId <= 0) {
+            return null;
+        }
+
+        $oeuvre = $this->oeuvres->findById($oeuvreId);
+        if ($oeuvre === null) {
+            return null;
+        }
+
+        $library = (new BibliothequeRepository())->findByOeuvreId($oeuvreId, UserContext::currentUserId());
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM bibliotheque WHERE oeuvre_id = ?');
+        $stmt->execute([$oeuvreId]);
+
+        return [
+            'oeuvre' => $oeuvre,
+            'library' => $library,
+            'library_count' => (int) $stmt->fetchColumn(),
+        ];
+    }
+
+    /**
+     * Crée une œuvre dans le catalogue (sans entrée bibliothèque).
+     *
+     * @param array<string, mixed> $data Champs issus de FilmManualEdit::parseFromPost
+     * @return int|string ID œuvre ou message d’erreur
+     */
+    public function createOeuvre(array $data): int|string
+    {
+        if (max(0, (int) ($data['oeuvre_id'] ?? 0)) > 0) {
+            return 'Cette œuvre est déjà au catalogue. Utilisez la liste ci-dessous pour la consulter.';
+        }
+
+        $titre = trim((string) ($data['titre'] ?? ''));
+        if ($titre === '') {
+            return 'Le titre est obligatoire.';
+        }
+
+        $realisateur = trim((string) ($data['realisateur'] ?? ''));
+        if ($this->oeuvres->findByTitreAndRealisateur($titre, $realisateur) !== null) {
+            return 'Une œuvre avec ce titre et ce réalisateur existe déjà au catalogue.';
+        }
+
+        $types = FilmManualEdit::resolveTmdbTypesForSave($data, []);
+        $payload = [
+            'titre' => $titre,
+            'titre_original' => trim((string) ($data['titre_original'] ?? '')),
+            'realisateur' => $realisateur,
+            'duree_min' => max(0, (int) ($data['duree_min'] ?? 0)),
+            'styles' => trim((string) ($data['styles'] ?? '')),
+            'annee' => max(0, (int) ($data['annee'] ?? 0)),
+            'nationalite' => TmdbCountries::formatNationaliteList((string) ($data['nationalite'] ?? '')),
+            'tmdb_id' => max(0, (int) ($data['tmdb_id'] ?? 0)),
+            'tmdb_media_type' => $types['media_type'],
+            'tmdb_tv_kind' => $types['tv_kind'],
+            'realisateur_tmdb_id' => 0,
+            'acteur_1' => trim((string) ($data['acteur_1'] ?? '')),
+            'acteur_1_tmdb_id' => 0,
+            'acteur_2' => trim((string) ($data['acteur_2'] ?? '')),
+            'acteur_2_tmdb_id' => 0,
+            'acteur_3' => trim((string) ($data['acteur_3'] ?? '')),
+            'acteur_3_tmdb_id' => 0,
+            'poster_url' => SecureUrl::sanitizePosterUrl((string) ($data['poster_url'] ?? '')),
+            'synopsis' => trim((string) ($data['synopsis'] ?? '')),
+            'moncine_kind' => MoncineContentKind::normalize((string) ($data['moncine_kind'] ?? '')),
+            'omdb_imdb_id' => '',
+            'omdb_enriched_at' => null,
+        ];
+
+        $oeuvreId = $this->oeuvres->insert($payload);
+        $this->cachePosterIfRemote($oeuvreId, (string) ($payload['poster_url'] ?? ''));
+
+        return $oeuvreId;
+    }
+
+    /**
+     * Supprime une œuvre du catalogue (et les entrées bibliothèque liées, en cascade).
+     *
+     * @return true|string
+     */
+    /**
+     * @param array<string, mixed> $data
+     * @return true|string
+     */
+    public function updateOeuvreManual(int $oeuvreId, array $data): bool|string
+    {
+        return (new FilmRepository())->updateOeuvreManual($oeuvreId, $data);
+    }
+
+    /**
+     * Import / mise à jour d’une œuvre catalogue depuis un export admin.
+     *
+     * @param array<string, mixed> $data
+     * @param list<string> $importedColumns
+     */
+    public function importOeuvreFromExport(array $data, array $importedColumns = []): void
+    {
+        $titre = trim((string) ($data['titre'] ?? ''));
+        if ($titre === '') {
+            throw new \RuntimeException('Le titre est obligatoire pour le catalogue.');
+        }
+
+        $realisateur = trim((string) ($data['realisateur'] ?? ''));
+        $oeuvreId = max(0, (int) ($data['oeuvre_id'] ?? 0));
+        $importSet = $importedColumns !== [] ? array_flip($importedColumns) : null;
+
+        $payload = [];
+        foreach (CatalogExportSchema::oeuvreDatabaseFields() as $field) {
+            if ($importSet !== null && !isset($importSet[$field])) {
+                continue;
+            }
+            if (array_key_exists($field, $data)) {
+                $payload[$field] = $data[$field];
+            }
+        }
+
+        $payload['titre'] = $titre;
+        $payload['realisateur'] = $realisateur;
+
+        if ($oeuvreId > 0) {
+            $duplicate = $this->oeuvres->findByTitreAndRealisateur($titre, $realisateur);
+            if ($duplicate !== null && (int) ($duplicate['id'] ?? 0) !== $oeuvreId) {
+                $wrongId = (int) $duplicate['id'];
+                if ($this->oeuvres->countBibliothequeLinks($wrongId) > 0) {
+                    throw new \RuntimeException(
+                        '« ' . $titre . ' » est déjà en base avec l’ID '
+                        . $wrongId . ' (fichier : ' . $oeuvreId . '). '
+                        . 'Cochez « Réinitialiser le catalogue avant import » ou supprimez les bibliothèques liées.'
+                    );
+                }
+                $this->oeuvres->deleteById($wrongId);
+                $duplicate = null;
+            }
+
+            $existing = $this->oeuvres->findById($oeuvreId);
+            if ($existing === null) {
+                $this->oeuvres->insertWithId($oeuvreId, $this->completeOeuvrePayload($payload));
+                $this->cachePosterIfRemote($oeuvreId, (string) ($payload['poster_url'] ?? ''));
+
+                return;
+            }
+
+            $fields = array_keys($payload);
+            $this->oeuvres->update($oeuvreId, $payload, $fields);
+            $this->cachePosterIfRemote($oeuvreId, (string) ($payload['poster_url'] ?? $existing['poster_url'] ?? ''));
+
+            return;
+        }
+
+        $duplicate = $this->oeuvres->findByTitreAndRealisateur($titre, $realisateur);
+        if ($duplicate !== null) {
+            $fields = array_keys($payload);
+            $this->oeuvres->update((int) $duplicate['id'], $payload, $fields);
+            $this->cachePosterIfRemote((int) $duplicate['id'], (string) ($payload['poster_url'] ?? ''));
+
+            return;
+        }
+
+        $newId = $this->oeuvres->insert($this->completeOeuvrePayload($payload));
+        $this->cachePosterIfRemote($newId, (string) ($payload['poster_url'] ?? ''));
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function completeOeuvrePayload(array $payload): array
+    {
+        foreach (CatalogSchema::OEUVRE_FIELDS as $field) {
+            if (array_key_exists($field, $payload)) {
+                continue;
+            }
+            $payload[$field] = match ($field) {
+                'duree_min', 'annee', 'tmdb_id', 'realisateur_tmdb_id',
+                'acteur_1_tmdb_id', 'acteur_2_tmdb_id', 'acteur_3_tmdb_id' => 0,
+                'omdb_enriched_at' => null,
+                'moncine_kind' => MoncineContentKind::FILM,
+                default => '',
+            };
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Supprime toutes les œuvres du catalogue (et les entrées bibliothèque — CASCADE).
+     * À utiliser avant un import migration avec conservation des ID catalogue.
+     */
+    public function clearCatalogForImport(): void
+    {
+        $this->oeuvres->deleteAll();
+    }
+
+    public function deleteOeuvre(int $oeuvreId): bool|string
+    {
+        if ($oeuvreId <= 0) {
+            return 'Œuvre invalide.';
+        }
+
+        if ($this->oeuvres->findById($oeuvreId) === null) {
+            return 'Œuvre introuvable ou déjà supprimée.';
+        }
+
+        if (!$this->oeuvres->deleteById($oeuvreId)) {
+            return 'Impossible de supprimer cette œuvre.';
+        }
+
+        return true;
+    }
+
+    public function sortUrl(string $column, string $currentSort, string $currentDir, string $search, int $page): string
+    {
+        $newDir = 'asc';
+        if ($currentSort === $column && strtolower($currentDir) !== 'desc') {
+            $newDir = 'desc';
+        }
+
+        $params = [
+            'sort' => $column,
+            'dir' => $newDir,
+            'page' => max(1, $page),
+        ];
+        $search = trim($search);
+        if ($search !== '') {
+            $params['q'] = $search;
+        }
+
+        return '/catalogue.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function resolveSort(string $sortBy, string $sortDir): array
+    {
+        $allowed = [
+            'titre' => 'o.titre COLLATE FRENCH_NOCASE',
+            'realisateur' => 'o.realisateur COLLATE FRENCH_NOCASE',
+            'annee' => 'o.annee',
+            'created_at' => 'o.created_at',
+        ];
+        $sqlSort = $allowed[$sortBy] ?? $allowed['titre'];
+        $direction = strtolower($sortDir) === 'desc' ? 'DESC' : 'ASC';
+
+        return [$sqlSort, $direction];
+    }
+
+    /**
+     * @return array{0: string, 1: list<mixed>}
+     */
+    private function searchWhere(string $search): array
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return ['', []];
+        }
+
+        $pattern = '%' . $this->escapeLike($search) . '%';
+
+        return [
+            ' WHERE LOWER(o.titre) LIKE LOWER(?) ESCAPE \'\\\'
+                OR LOWER(o.realisateur) LIKE LOWER(?) ESCAPE \'\\\'',
+            [$pattern, $pattern],
+        ];
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    private function cachePosterIfRemote(int $oeuvreId, string $posterUrl): void
+    {
+        if ($oeuvreId <= 0 || !PosterStorage::isRemoteUrl(trim($posterUrl))) {
+            return;
+        }
+
+        $local = (new PosterStorage())->cacheRemoteForOeuvre($oeuvreId, trim($posterUrl));
+        if ($local !== '') {
+            $this->oeuvres->update($oeuvreId, ['poster_url' => $local], ['poster_url']);
+        }
+    }
+}

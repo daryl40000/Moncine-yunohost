@@ -1,0 +1,34 @@
+#!/bin/bash
+# Installation Moncine — paquet YunoHost
+#
+# Étapes : copier le code → dossier data persistant → nginx + PHP → migrations SQLite.
+# L’administrateur crée ensuite son compte via /premier-compte.php dans le navigateur.
+
+set -euo pipefail
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Installation de ${app}…"
+
+# Limites PHP (CSV + archive ZIP affiches jusqu’à 80 Mo)
+ynh_app_setting_set --key=php_upload_max_filesize --value=85M
+ynh_app_setting_set --key=php_post_max_size --value=85M
+
+ynh_script_progression "Copie des fichiers de l'application…"
+moncine_copy_sources "${install_dir}"
+chown -R "${app}:www-data" "${install_dir}"
+
+ynh_script_progression "Initialisation de la base SQLite…"
+moncine_run_migrate
+
+ynh_script_progression "Graine d’installation (catalogue / affiches)…"
+moncine_apply_install_seed
+
+ynh_script_progression "Configuration PHP-FPM et NGINX…"
+ynh_config_add_phpfpm
+ynh_config_add_nginx
+
+ynh_script_progression "Installation de ${app} terminée."
+ynh_print_info "Ouvrez https://${domain}${path} puis créez le compte administrateur (/premier-compte.php)."
+ynh_print_info "Catalogue prérempli si vous avez déposé catalogue.csv et affiches.zip dans install_seed/ (voir install_seed/README.md)."

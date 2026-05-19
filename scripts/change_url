@@ -1,0 +1,16 @@
+#!/bin/bash
+# Changement de domaine ou de chemin — paquet YunoHost Moncine
+
+set -euo pipefail
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Mise à jour de l’URL de ${app}…"
+
+ynh_config_add_phpfpm
+ynh_config_add_nginx
+
+moncine_fix_data_permissions
+
+ynh_script_progression "Changement d’URL terminé."

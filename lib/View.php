@@ -1,0 +1,308 @@
+<?php
+/**
+ * Rendu simple des templates PHP (sans moteur externe).
+ */
+
+declare(strict_types=1);
+
+namespace Moncine;
+
+final class View
+{
+    public static function render(string $template, array $data = []): void
+    {
+        $templateFile = MONCINE_ROOT . '/templates/' . $template . '.php';
+        if (!is_file($templateFile)) {
+            http_response_code(500);
+            echo 'Template introuvable : ' . htmlspecialchars($template);
+            return;
+        }
+        if (!isset($data['wideLayout']) && self::templateUsesWideLayout($template)) {
+            $data['wideLayout'] = true;
+        }
+        $useAuthLayout = array_key_exists('layout', $data) && $data['layout'] === false;
+        extract($data, EXTR_SKIP);
+        require MONCINE_ROOT . '/templates/' . ($useAuthLayout ? 'layout_auth.php' : 'layout.php');
+    }
+
+    /** Pages avec tableaux larges (collection, listes…). */
+    private static function templateUsesWideLayout(string $template): bool
+    {
+        return in_array($template, [
+            'films',
+            'souhaits',
+            'personnes',
+            'support',
+            'sagas',
+            'statistiques',
+            'catalogue',
+        ], true);
+    }
+
+    public static function escape(?string $value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /** Libellé affiché pour la catégorie d’une fiche (film, série, spectacle…). */
+    public static function contentKindLabel(array $film): string
+    {
+        $moncineKind = MoncineContentKind::normalize((string) ($film['moncine_kind'] ?? ''));
+        if ($moncineKind === MoncineContentKind::SERIE) {
+            return MoncineContentKind::label(MoncineContentKind::SERIE);
+        }
+        if ($moncineKind === MoncineContentKind::SPECTACLE) {
+            return MoncineContentKind::label(MoncineContentKind::SPECTACLE);
+        }
+
+        return TmdbMediaType::label(
+            (string) ($film['tmdb_media_type'] ?? ''),
+            (string) ($film['tmdb_tv_kind'] ?? '')
+        );
+    }
+
+    /** Affichage lisible d’un code EAN (séparation par groupes si 13 chiffres). */
+    public static function formatEan(string $ean): string
+    {
+        $digits = preg_replace('/\D+/', '', $ean) ?? '';
+        if (strlen($digits) === 13) {
+            return substr($digits, 0, 1) . ' '
+                . substr($digits, 1, 6) . ' '
+                . substr($digits, 7, 6);
+        }
+
+        return trim($ean);
+    }
+
+    /** URL d’affiche pour src : chemin local /posters/… ou HTTPS distant (échappée). */
+    public static function posterSrc(?string $url): string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (PosterStorage::isLocalWebPath($url)) {
+            $path = PosterStorage::filesystemPathFromWeb($url);
+            if ($path !== null && is_file($path)) {
+                return self::escape($url);
+            }
+
+            return '';
+        }
+
+        $safe = SecureUrl::sanitizePosterUrl($url);
+
+        return $safe !== '' ? self::escape($safe) : '';
+    }
+
+    /** Champ caché à inclure dans les formulaires POST protégés. */
+    public static function csrfField(): string
+    {
+        return '<input type="hidden" name="' . self::escape(Csrf::FIELD_NAME) . '" value="'
+            . self::escape(Csrf::getToken()) . '">';
+    }
+
+    /** Lien vers la liste des films d’un réalisateur ou acteur. */
+    /** Lien de tri pour la table « Ma collection » (clic = bascule asc/desc). */
+    public static function filmsSortUrl(
+        string $column,
+        string $currentSort,
+        string $currentDir,
+        string $searchQuery = '',
+        string $kindFilter = '',
+        string $viewMode = ''
+    ): string {
+        $dir = 'asc';
+        if ($currentSort === $column && strtolower($currentDir) === 'asc') {
+            $dir = 'desc';
+        }
+
+        return self::filmsCollectionUrl($searchQuery, $column, $dir, $kindFilter, $viewMode);
+    }
+
+    /** Lien vers la collection (recherche, tri, filtre catégorie, mode d’affichage). */
+    public static function filmsCollectionUrl(
+        string $searchQuery = '',
+        string $sortBy = 'titre',
+        string $sortDir = 'asc',
+        string $kindFilter = '',
+        string $viewMode = ''
+    ): string {
+        $params = [];
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery !== '') {
+            $params['q'] = $searchQuery;
+        }
+        if ($sortBy !== '' && $sortBy !== 'titre') {
+            $params['sort'] = $sortBy;
+        }
+        if (strtolower($sortDir) === 'desc') {
+            $params['dir'] = 'desc';
+        }
+        $kindFilter = ContentKindFilter::normalize($kindFilter);
+        if ($kindFilter !== ContentKindFilter::ALL) {
+            $params['kind'] = $kindFilter;
+        }
+        if (CollectionViewMode::isGrid($viewMode)) {
+            $params['view'] = CollectionViewMode::GRID;
+        }
+
+        return $params === [] ? '/films.php' : '/films.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Page de choix ou formulaire d’ajout de film. */
+    public static function addFilmChoiceUrl(): string
+    {
+        return '/ajouter-film.php';
+    }
+
+    public static function addFilmUrl(string $statut, int $oeuvreId = 0): string
+    {
+        $statut = LibraryStatut::normalize($statut);
+        $params = ['statut' => $statut];
+        if ($oeuvreId > 0) {
+            $params['oeuvre_id'] = (string) $oeuvreId;
+        }
+
+        return '/ajouter-film.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Fiche d’une œuvre dans le catalogue partagé. */
+    public static function oeuvreUrl(
+        int $oeuvreId,
+        string $catalogSearch = '',
+        string $catalogSort = 'titre',
+        string $catalogDir = 'asc',
+        int $catalogPage = 1
+    ): string {
+        if ($oeuvreId <= 0) {
+            return self::catalogueUrl($catalogSearch, $catalogSort, $catalogDir, $catalogPage);
+        }
+
+        $params = ['id' => (string) $oeuvreId];
+        $catalogSearch = trim($catalogSearch);
+        if ($catalogSearch !== '') {
+            $params['catalog_q'] = $catalogSearch;
+        }
+        if ($catalogSort !== '' && $catalogSort !== 'titre') {
+            $params['catalog_sort'] = $catalogSort;
+        }
+        if (strtolower($catalogDir) === 'desc') {
+            $params['catalog_dir'] = 'desc';
+        }
+        if ($catalogPage > 1) {
+            $params['catalog_page'] = (string) $catalogPage;
+        }
+
+        return '/oeuvre.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Page d’administration du catalogue (liste des œuvres). */
+    public static function catalogueUrl(
+        string $search = '',
+        string $sortBy = 'titre',
+        string $sortDir = 'asc',
+        int $page = 1
+    ): string {
+        $params = [];
+        $search = trim($search);
+        if ($search !== '') {
+            $params['q'] = $search;
+        }
+        if ($sortBy !== '' && $sortBy !== 'titre') {
+            $params['sort'] = $sortBy;
+        }
+        if (strtolower($sortDir) === 'desc') {
+            $params['dir'] = 'desc';
+        }
+        if ($page > 1) {
+            $params['page'] = (string) $page;
+        }
+
+        return $params === [] ? '/catalogue.php' : '/catalogue.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Lien vers la wishlist (Mes envies). */
+    public static function wishlistUrl(
+        string $searchQuery = '',
+        string $sortBy = 'titre',
+        string $sortDir = 'asc'
+    ): string {
+        $params = [];
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery !== '') {
+            $params['q'] = $searchQuery;
+        }
+        if ($sortBy !== '' && $sortBy !== 'titre') {
+            $params['sort'] = $sortBy;
+        }
+        if (strtolower($sortDir) === 'desc') {
+            $params['dir'] = 'desc';
+        }
+
+        return $params === [] ? '/souhaits.php' : '/souhaits.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    public static function wishlistSortUrl(
+        string $column,
+        string $currentSort,
+        string $currentDir,
+        string $searchQuery = ''
+    ): string {
+        $dir = 'asc';
+        if ($currentSort === $column && strtolower($currentDir) === 'asc') {
+            $dir = 'desc';
+        }
+
+        $params = [
+            'sort' => $column,
+            'dir' => $dir,
+        ];
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery !== '') {
+            $params['q'] = $searchQuery;
+        }
+
+        return '/souhaits.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Indicateur visuel du tri actif (↑ ou ↓). */
+    public static function filmsSortIndicator(string $column, string $currentSort, string $currentDir): string
+    {
+        if ($currentSort !== $column) {
+            return '';
+        }
+
+        return strtolower($currentDir) === 'desc' ? ' ↓' : ' ↑';
+    }
+
+    public static function sagaUrl(string $sagaName): string
+    {
+        $sagaName = trim($sagaName);
+        if ($sagaName === '') {
+            return '/sagas.php';
+        }
+
+        return '/sagas.php?saga=' . rawurlencode($sagaName);
+    }
+
+    public static function supportFilterUrl(string $supportKey): string
+    {
+        if (!SupportPhysique::isValid($supportKey)) {
+            return '/support.php';
+        }
+
+        return '/support.php?type=' . rawurlencode($supportKey);
+    }
+
+    public static function personSearchUrl(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return '/personnes.php';
+        }
+
+        return '/personnes.php?q=' . rawurlencode($name);
+    }
+}

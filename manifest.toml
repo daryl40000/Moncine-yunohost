@@ -1,0 +1,56 @@
+# Paquet YunoHost — Moncine (dvdthèque)
+# Doc : https://doc.yunohost.org/fr/packaging/
+
+packaging_format = 2
+
+id = "moncine"
+name = "Moncine"
+description.fr = "Dvdthèque personnelle : collection, envies, choix du film du soir"
+description.en = "Personal movie library: collection, wishlist, evening picker"
+
+version = "2.1.0~ynh1"
+
+maintainers = ["Stéphane MATER"]
+
+[upstream]
+license = "GPL-3.0-or-later"
+website = "https://github.com/stephane/Moncine"
+code = "https://github.com/stephane/Moncine"
+
+[integration]
+yunohost = ">= 12.1.17"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = true
+ldap = false
+sso = false
+disk = "200M"
+ram.build = "50M"
+ram.runtime = "100M"
+
+[install]
+
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "visitors"
+
+[resources]
+
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+
+    [resources.apt]
+    packages = "php8.4-fpm, php8.4-sqlite3, php8.4-mbstring, php8.4-intl, php8.4-curl, php8.4-zip"

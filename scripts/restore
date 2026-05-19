@@ -1,0 +1,17 @@
+#!/bin/bash
+# Restauration Moncine — paquet YunoHost
+
+set -euo pipefail
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Restauration de ${app}…"
+
+ynh_config_add_phpfpm
+ynh_config_add_nginx
+
+moncine_prepare_data_dir
+moncine_run_migrate
+
+ynh_script_progression "Restauration de ${app} terminée."
