@@ -1393,6 +1393,31 @@ final class CatalogFilmRepository
      * @param array<string, mixed> $data Champs formulaire (comme updateManual)
      * @return int|string ID bibliothèque si OK, sinon message d’erreur
      */
+    /**
+     * Ajoute une œuvre déjà au catalogue à la bibliothèque (sans formulaire détaillé).
+     *
+     * @return int|string ID bibliothèque ou message d’erreur
+     */
+    public function addFromCatalogOeuvre(int $oeuvreId, string $statut): int|string
+    {
+        if ($oeuvreId <= 0) {
+            return 'Œuvre invalide.';
+        }
+
+        $oeuvre = $this->oeuvres->findById($oeuvreId);
+        if ($oeuvre === null) {
+            return 'Cette œuvre n’existe plus dans le catalogue.';
+        }
+
+        return $this->attachOeuvreToLibrary($oeuvreId, [
+            'oeuvre_id' => $oeuvreId,
+            'titre' => (string) ($oeuvre['titre'] ?? ''),
+            'realisateur' => (string) ($oeuvre['realisateur'] ?? ''),
+            'annee' => (int) ($oeuvre['annee'] ?? 0),
+            'moncine_kind' => (string) ($oeuvre['moncine_kind'] ?? ''),
+        ], LibraryStatut::normalize($statut));
+    }
+
     public function createManual(array $data, string $statut): int|string
     {
         $statut = LibraryStatut::normalize($statut);

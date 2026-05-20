@@ -114,12 +114,23 @@ final class NotificationService
             return;
         }
 
-        $titre = trim($titre) !== '' ? trim($titre) : 'votre proposition';
-        $link = '/mes-soumissions.php';
-        $title = 'Proposition acceptée';
-        $body = '« ' . $titre . ' » a été ajoutée au catalogue Moncine.';
+        $titre = trim($titre);
+        if ($titre === '' && $oeuvreId > 0) {
+            $oeuvre = (new OeuvreRepository())->findById($oeuvreId);
+            $titre = trim((string) ($oeuvre['titre'] ?? ''));
+        }
+        if ($titre === '') {
+            $titre = 'votre proposition';
+        }
+
+        $link = $oeuvreId > 0
+            ? View::addFilmChoiceUrl($oeuvreId)
+            : '/mes-soumissions.php';
+        $title = 'Proposition acceptée — ' . $titre;
+        $body = '« ' . $titre . ' » est dans le catalogue Moncine.';
+        $body .= ' Cliquez pour l’ajouter à Mes films (collection) ou à Mes envies.';
         if (trim($reviewNote) !== '') {
-            $body .= "\n\nMessage : " . trim($reviewNote);
+            $body .= "\n\nMessage de l’administrateur : " . trim($reviewNote);
         }
 
         $this->repo->insert(

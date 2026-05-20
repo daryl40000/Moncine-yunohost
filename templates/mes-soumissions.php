@@ -53,7 +53,7 @@
                         <td><?= Moncine\View::escape((string) ($row['created_at'] ?? '')) ?></td>
                         <td>
                             <?php if ($status === Moncine\CatalogSubmissionRepository::STATUS_APPROVED && $oeuvreId > 0): ?>
-                                <a href="/ajouter-film.php?oeuvre_id=<?= $oeuvreId ?>">Ajouter à mes films</a>
+                                <a href="<?= Moncine\View::escape(Moncine\View::addFilmChoiceUrl($oeuvreId)) ?>">Ajouter à mes films ou envies</a>
                                 <?php if (Moncine\CatalogAdmin::canAccess()): ?>
                                     · <a href="/oeuvre.php?id=<?= $oeuvreId ?>">Fiche catalogue</a>
                                 <?php endif; ?>

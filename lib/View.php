@@ -160,9 +160,69 @@ final class View
     }
 
     /** Page de choix ou formulaire d’ajout de film. */
-    public static function addFilmChoiceUrl(): string
+    public static function addFilmChoiceUrl(int $oeuvreId = 0): string
     {
+        if ($oeuvreId > 0) {
+            return '/ajouter-film.php?oeuvre_id=' . $oeuvreId;
+        }
+
         return '/ajouter-film.php';
+    }
+
+    /**
+     * URL ouverte au clic sur une notification (marque lue puis redirige).
+     */
+    public static function notificationOpenUrl(array $note): string
+    {
+        $id = (int) ($note['id'] ?? 0);
+        if ($id > 0) {
+            return '/notifications.php?read=' . $id;
+        }
+
+        return self::notificationRedirectTarget($note);
+    }
+
+    /** Destination après lecture d’une notification. */
+    public static function notificationRedirectTarget(array $note): string
+    {
+        $kind = (string) ($note['kind'] ?? '');
+        $oeuvreId = (int) ($note['related_oeuvre_id'] ?? 0);
+        if ($kind === NotificationRepository::KIND_SUBMISSION_APPROVED && $oeuvreId > 0) {
+            return self::addFilmChoiceUrl($oeuvreId);
+        }
+
+        $link = trim((string) ($note['link_url'] ?? ''));
+        if ($link !== '' && str_starts_with($link, '/')) {
+            return $link;
+        }
+
+        return '/notifications.php';
+    }
+
+    /** Texte affiché pour une notification (complète les anciennes entrées vides). */
+    public static function notificationDisplayBody(array $note): string
+    {
+        $body = trim((string) ($note['body'] ?? ''));
+        if ($body !== '') {
+            return $body;
+        }
+
+        $kind = (string) ($note['kind'] ?? '');
+        $oeuvreId = (int) ($note['related_oeuvre_id'] ?? 0);
+        if ($kind === NotificationRepository::KIND_SUBMISSION_APPROVED) {
+            $titre = '';
+            if ($oeuvreId > 0) {
+                $oeuvre = (new OeuvreRepository())->findById($oeuvreId);
+                $titre = trim((string) ($oeuvre['titre'] ?? ''));
+            }
+            if ($titre !== '') {
+                return '« ' . $titre . ' » est dans le catalogue. Ajoutez-le à Mes films ou à Mes envies.';
+            }
+
+            return 'Votre proposition a été acceptée. Ajoutez le film à Mes films ou à Mes envies.';
+        }
+
+        return '';
     }
 
     public static function addFilmUrl(string $statut, int $oeuvreId = 0): string

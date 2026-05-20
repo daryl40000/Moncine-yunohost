@@ -14,24 +14,85 @@ $saveError = $saveError ?? '';
 $sagaSuggestions = $sagaSuggestions ?? [];
 $hasTmdbKey = $hasTmdbKey ?? false;
 $canManageCatalog = $canManageCatalog ?? false;
+$prefillOeuvreId = (int) ($prefillOeuvreId ?? 0);
+$prefillFilm = $prefillFilm ?? null;
 ?>
 <section class="add-film-page">
     <?php if ($showChoice): ?>
         <h1>Ajouter un film</h1>
-        <p class="lead">Où souhaitez-vous enregistrer ce titre ?</p>
+        <?php if ($prefillOeuvreId > 0 && is_array($prefillFilm)): ?>
+            <?php $posterSrc = Moncine\View::posterSrc($prefillFilm['poster_url'] ?? null); ?>
+            <div class="add-film-choice-intro<?= $posterSrc !== '' ? ' add-film-choice-intro--with-poster' : '' ?>">
+                <?php if ($posterSrc !== ''): ?>
+                    <img class="film-poster add-film-choice-intro__poster" src="<?= $posterSrc ?>"
+                         alt="Affiche de <?= Moncine\View::escape((string) ($prefillFilm['titre'] ?? '')) ?>"
+                         width="200" height="300" decoding="async">
+                <?php else: ?>
+                    <div class="add-film-choice-intro__poster-placeholder" aria-hidden="true">
+                        <span>Pas d’affiche</span>
+                    </div>
+                <?php endif; ?>
+                <div class="add-film-choice-intro__text">
+                    <p class="add-film-choice-intro__title">
+                        <?= Moncine\View::escape((string) ($prefillFilm['titre'] ?? '')) ?>
+                    </p>
+                    <?php if (trim((string) ($prefillFilm['realisateur'] ?? '')) !== ''): ?>
+                        <p class="add-film-choice-intro__meta">
+                            <?= Moncine\View::escape((string) $prefillFilm['realisateur']) ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php if ((int) ($prefillFilm['annee'] ?? 0) > 0): ?>
+                        <p class="add-film-choice-intro__meta"><?= (int) $prefillFilm['annee'] ?></p>
+                    <?php endif; ?>
+                    <p class="lead add-film-choice-intro__lead">
+                        Choisissez une liste ci-dessous — le film y sera ajouté tout de suite.
+                    </p>
+                </div>
+            </div>
+        <?php else: ?>
+            <p class="lead">Où souhaitez-vous enregistrer ce titre ?</p>
+        <?php endif; ?>
+
+        <?php if ($saveError !== ''): ?>
+            <p class="alert alert-warning"><?= Moncine\View::escape($saveError) ?></p>
+        <?php endif; ?>
 
         <div class="add-film-choice">
-            <a href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::COLLECTION)) ?>"
-               class="add-film-choice__card">
-                <span class="add-film-choice__title">Mes films</span>
-                <span class="add-film-choice__hint">Film que vous possédez déjà (DVD, Blu-ray…)</span>
-            </a>
-            <?php if ($usesCatalog): ?>
-                <a href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::WISHLIST)) ?>"
-                   class="add-film-choice__card add-film-choice__card--wishlist">
-                    <span class="add-film-choice__title"><?= Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST)) ?></span>
-                    <span class="add-film-choice__hint">Film que vous aimeriez voir ou posséder un jour</span>
+            <?php if ($prefillOeuvreId > 0 && is_array($prefillFilm)): ?>
+                <form method="post" action="/ajouter-oeuvre-bibliotheque.php" class="add-film-choice__card add-film-choice__form">
+                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                    <input type="hidden" name="oeuvre_id" value="<?= (int) $prefillOeuvreId ?>">
+                    <input type="hidden" name="statut" value="<?= Moncine\View::escape(Moncine\LibraryStatut::COLLECTION) ?>">
+                    <button type="submit" class="add-film-choice__submit">
+                        <span class="add-film-choice__title">Mes films</span>
+                        <span class="add-film-choice__hint">Ajouter à la collection partagée (DVD, Blu-ray…)</span>
+                    </button>
+                </form>
+                <?php if ($usesCatalog): ?>
+                    <form method="post" action="/ajouter-oeuvre-bibliotheque.php"
+                          class="add-film-choice__card add-film-choice__card--wishlist add-film-choice__form">
+                        <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                        <input type="hidden" name="oeuvre_id" value="<?= (int) $prefillOeuvreId ?>">
+                        <input type="hidden" name="statut" value="<?= Moncine\View::escape(Moncine\LibraryStatut::WISHLIST) ?>">
+                        <button type="submit" class="add-film-choice__submit">
+                            <span class="add-film-choice__title"><?= Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST)) ?></span>
+                            <span class="add-film-choice__hint">Ajouter à votre liste d’envies personnelle</span>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            <?php else: ?>
+                <a href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::COLLECTION, $prefillOeuvreId)) ?>"
+                   class="add-film-choice__card">
+                    <span class="add-film-choice__title">Mes films</span>
+                    <span class="add-film-choice__hint">Film que vous possédez déjà (DVD, Blu-ray…)</span>
                 </a>
+                <?php if ($usesCatalog): ?>
+                    <a href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::WISHLIST, $prefillOeuvreId)) ?>"
+                       class="add-film-choice__card add-film-choice__card--wishlist">
+                        <span class="add-film-choice__title"><?= Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST)) ?></span>
+                        <span class="add-film-choice__hint">Film que vous aimeriez voir ou posséder un jour</span>
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 

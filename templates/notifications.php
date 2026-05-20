@@ -33,16 +33,18 @@
                 <?php
                 $id = (int) ($note['id'] ?? 0);
                 $isUnread = ($note['read_at'] ?? null) === null;
-                $link = trim((string) ($note['link_url'] ?? ''));
-                $href = $id > 0
-                    ? '/notifications.php?read=' . $id
-                    : ($link !== '' ? $link : '/notifications.php');
+                $href = Moncine\View::notificationOpenUrl($note);
+                $displayBody = Moncine\View::notificationDisplayBody($note);
+                $title = trim((string) ($note['title'] ?? ''));
+                if ($title === '') {
+                    $title = 'Notification';
+                }
                 ?>
                 <li class="notification-list__item<?= $isUnread ? ' notification-list__item--unread' : '' ?>">
                     <a href="<?= Moncine\View::escape($href) ?>" class="notification-list__link">
-                        <span class="notification-list__title"><?= Moncine\View::escape((string) ($note['title'] ?? '')) ?></span>
-                        <?php if (trim((string) ($note['body'] ?? '')) !== ''): ?>
-                            <span class="notification-list__body"><?= Moncine\View::escape((string) $note['body']) ?></span>
+                        <span class="notification-list__title"><?= Moncine\View::escape($title) ?></span>
+                        <?php if ($displayBody !== ''): ?>
+                            <span class="notification-list__body"><?= Moncine\View::escape($displayBody) ?></span>
                         <?php endif; ?>
                         <span class="notification-list__date hint"><?= Moncine\View::escape((string) ($note['created_at'] ?? '')) ?></span>
                     </a>

@@ -360,6 +360,20 @@ final class FilmRepository
     }
 
     /**
+     * Ajoute une œuvre du catalogue partagé à Mes films ou Mes envies en un clic.
+     *
+     * @return int|string ID bibliothèque ou message d’erreur
+     */
+    public function addFromCatalogOeuvre(int $oeuvreId, string $statut): int|string
+    {
+        if (!$this->engine instanceof CatalogFilmRepository) {
+            return 'Cette action nécessite le catalogue partagé Moncine.';
+        }
+
+        return $this->engine->addFromCatalogOeuvre($oeuvreId, $statut);
+    }
+
+    /**
      * Recherche dans le catalogue partagé (autocomplétion titre).
      *
      * @return list<array<string, mixed>>

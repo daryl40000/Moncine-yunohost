@@ -22,13 +22,9 @@ $markId = max(0, (int) ($_GET['read'] ?? 0));
 if ($markId > 0 && NotificationService::isAvailable()) {
     $row = (new NotificationRepository())->findByIdForUser($markId, $userId);
     $service->markRead($markId, $userId);
-    $redirect = '/notifications.php';
-    if ($row !== null) {
-        $target = trim((string) ($row['link_url'] ?? ''));
-        if ($target !== '' && str_starts_with($target, '/')) {
-            $redirect = $target;
-        }
-    }
+    $redirect = $row !== null
+        ? View::notificationRedirectTarget($row)
+        : '/notifications.php';
     header('Location: ' . $redirect);
     exit;
 }
