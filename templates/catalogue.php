@@ -63,7 +63,7 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
         <p class="alert alert-warning"><?= Moncine\View::escape($deleteError) ?></p>
     <?php endif; ?>
 
-    <details class="catalog-admin-panel" open>
+    <details class="catalog-admin-panel"<?= ($added || $saveError !== '') ? ' open' : '' ?>>
         <summary class="catalog-admin-panel__summary">Ajouter une œuvre au catalogue</summary>
         <div class="catalog-admin-panel__body">
             <p class="hint">
@@ -184,10 +184,14 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                 <?php endif; ?>
             </p>
 
-            <?php
-            $paginationIdSuffix = '-top';
-            require MONCINE_ROOT . '/templates/_catalog_admin_pagination.php';
-            ?>
+            <?php if ($totalPages > 1): ?>
+                <div id="catalog-list-nav" class="catalog-list-nav-anchor">
+                    <?php
+                    $paginationIdSuffix = '-top';
+                    require MONCINE_ROOT . '/templates/_catalog_admin_pagination.php';
+                    ?>
+                </div>
+            <?php endif; ?>
 
             <p class="table-scroll-hint show-mobile-only">Faites glisser le tableau horizontalement pour voir toutes les colonnes.</p>
             <div id="catalogue-list" class="table-scroll catalogue-list-anchor">
@@ -252,7 +256,13 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                                         <input type="hidden" name="q" value="<?= Moncine\View::escape($search) ?>">
                                         <input type="hidden" name="sort" value="<?= Moncine\View::escape($sortBy) ?>">
                                         <input type="hidden" name="dir" value="<?= Moncine\View::escape($sortDir) ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger-text">Supprimer</button>
+                                        <button type="submit" class="btn btn-icon btn-danger-text"
+                                                title="Supprimer du catalogue"
+                                                aria-label="Supprimer « <?= Moncine\View::escape((string) ($oeuvre['titre'] ?? '')) ?> » du catalogue">
+                                            <svg class="icon-trash" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"/>
+                                            </svg>
+                                        </button>
                                     </form>
                                 </td>
                             </tr>

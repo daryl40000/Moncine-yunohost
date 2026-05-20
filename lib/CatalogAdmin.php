@@ -84,6 +84,80 @@ final class CatalogAdmin
     }
 
     /**
+     * IDs de toutes les œuvres correspondant au tri / recherche (navigation Préc./Suiv.).
+     *
+     * @return list<int>
+     */
+    public function listOeuvreIds(string $search, string $sortBy, string $sortDir): array
+    {
+        [$sqlSort, $direction] = $this->resolveSort($sortBy, $sortDir);
+        [$whereSql, $params] = $this->searchWhere($search);
+        $sql = 'SELECT o.id FROM oeuvres o' . $whereSql
+            . ' ORDER BY ' . $sqlSort . ' ' . $direction;
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $ids = [];
+        while ($row = $stmt->fetch()) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Œuvre précédente / suivante dans la liste catalogue (même tri et recherche).
+     *
+     * @return array{
+     *   prev_id: int|null,
+     *   next_id: int|null,
+     *   position: int,
+     *   total: int,
+     *   in_list: bool
+     * }
+     */
+    public function getOeuvreNavigation(
+        int $oeuvreId,
+        string $search,
+        string $sortBy,
+        string $sortDir
+    ): array {
+        if ($oeuvreId <= 0) {
+            return [
+                'prev_id' => null,
+                'next_id' => null,
+                'position' => 0,
+                'total' => 0,
+                'in_list' => false,
+            ];
+        }
+
+        $ids = $this->listOeuvreIds($search, $sortBy, $sortDir);
+        $total = count($ids);
+        $index = array_search($oeuvreId, $ids, true);
+        if ($index === false) {
+            return [
+                'prev_id' => null,
+                'next_id' => null,
+                'position' => 0,
+                'total' => $total,
+                'in_list' => false,
+            ];
+        }
+
+        return [
+            'prev_id' => $index > 0 ? $ids[$index - 1] : null,
+            'next_id' => $index < $total - 1 ? $ids[$index + 1] : null,
+            'position' => $index + 1,
+            'total' => $total,
+            'in_list' => true,
+        ];
+    }
+
+    /**
      * Fiche catalogue + lien bibliothèque de l’utilisateur courant (s’il existe).
      *
      * @return array{oeuvre: array<string, mixed>, library: ?array<string, mixed>, library_count: int}|null
@@ -361,17 +435,7 @@ final class CatalogAdmin
             $newDir = 'desc';
         }
 
-        $params = [
-            'sort' => $column,
-            'dir' => $newDir,
-            'page' => max(1, $page),
-        ];
-        $search = trim($search);
-        if ($search !== '') {
-            $params['q'] = $search;
-        }
-
-        return '/catalogue.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        return View::catalogueUrl(trim($search), $column, $newDir, max(1, $page));
     }
 
     /**

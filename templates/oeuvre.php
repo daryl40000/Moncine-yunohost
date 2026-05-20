@@ -32,6 +32,12 @@
             <?php endif; ?>
         </p>
 
+        <?php if (isset($catalogListContext, $oeuvreNav)): ?>
+            <div id="catalog-oeuvre-nav" class="catalog-oeuvre-nav-anchor">
+                <?php require MONCINE_ROOT . '/templates/_catalog_oeuvre_nav.php'; ?>
+            </div>
+        <?php endif; ?>
+
         <?php $posterSrc = Moncine\View::posterSrc($oeuvre['poster_url'] ?? null); ?>
         <article class="film-detail<?= $posterSrc !== '' ? ' film-detail--with-poster' : '' ?>">
             <?php if ($posterSrc !== ''): ?>
@@ -171,6 +177,10 @@
                         </p>
                     <?php endif; ?>
                 </section>
+
+                <?php if (isset($catalogListContext, $oeuvreNav)): ?>
+                    <?php require MONCINE_ROOT . '/templates/_catalog_oeuvre_nav.php'; ?>
+                <?php endif; ?>
             </div>
         </article>
 

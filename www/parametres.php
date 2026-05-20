@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 View::render('parametres', [
-    'pageTitle' => 'Paramètres',
+    'pageTitle' => 'Mon compte',
     'user' => $user,
     'displayName' => UserProfile::displayName($user),
     'foyer' => (new FoyerRepository())->findForUser($userId),

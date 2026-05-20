@@ -1422,6 +1422,12 @@ final class CatalogFilmRepository
             return $this->attachOeuvreToLibrary((int) $oeuvre['id'], $data, $statut);
         }
 
+        if (!UserContext::canManageCatalog()) {
+            return 'Cette œuvre n’est pas encore dans le catalogue Moncine. '
+                . 'Proposez-la d’abord via « Proposer au catalogue », '
+                . 'puis ajoutez-la à vos films une fois la proposition acceptée.';
+        }
+
         $data['statut'] = $statut;
         $this->upsertFromExport($data, []);
 

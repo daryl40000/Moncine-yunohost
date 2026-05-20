@@ -46,8 +46,11 @@ $canManageCatalog = $canManageCatalog ?? false;
             <?php if ($canManageCatalog): ?>
                 Vous pouvez enregistrer avec enrichissement TMDB (affiche, synopsis, acteurs…)
                 ou compléter la fiche plus tard depuis le catalogue.
+            <?php elseif (Moncine\CatalogSubmission::canSubmit()): ?>
+                Choisissez une œuvre déjà au catalogue, ou
+                <a href="/proposer-oeuvre.php">proposez une nouvelle fiche</a> à l’administrateur.
             <?php else: ?>
-                Les métadonnées du catalogue (affiche, synopsis…) sont gérées par l’administrateur.
+                Choisissez une œuvre déjà présente au catalogue partagé.
             <?php endif; ?>
         </p>
 

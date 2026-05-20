@@ -7,6 +7,7 @@ namespace Moncine\Tests\Integration;
 use Moncine\Auth;
 use Moncine\BibliothequeRepository;
 use Moncine\CatalogFilmRepository;
+use Moncine\FoyerRepository;
 use Moncine\FilmRepository;
 use Moncine\ImportRunner;
 use Moncine\LibraryExportSchema;
@@ -33,7 +34,11 @@ final class LibraryImportTest extends MoncineTestCase
         $this->assertSame(1, $result['imported']);
         $this->assertSame([], $result['errors']);
 
-        $library = (new BibliothequeRepository())->findByOeuvreId($oeuvreId, Auth::currentUserId());
+        $library = (new BibliothequeRepository())->findByOeuvreId(
+            $oeuvreId,
+            Auth::currentUserId(),
+            (new FoyerRepository())->currentFoyerIdForUser(Auth::currentUserId())
+        );
         $this->assertNotNull($library);
         $this->assertSame(LibraryStatut::COLLECTION, $library['statut']);
         $this->assertSame('dvd', $library['support_physique']);
@@ -90,7 +95,11 @@ final class LibraryImportTest extends MoncineTestCase
         $this->assertSame(1, $result['imported']);
         $this->assertSame([], $result['errors']);
 
-        $library = (new BibliothequeRepository())->findByOeuvreId($oeuvreId, Auth::currentUserId());
+        $library = (new BibliothequeRepository())->findByOeuvreId(
+            $oeuvreId,
+            Auth::currentUserId(),
+            (new FoyerRepository())->currentFoyerIdForUser(Auth::currentUserId())
+        );
         $this->assertNotNull($library);
         $this->assertSame('bluray', $library['support_physique']);
     }

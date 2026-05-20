@@ -1,0 +1,190 @@
+<?php
+/**
+ * Création et envoi des notifications (in-app + e-mail optionnel).
+ */
+
+declare(strict_types=1);
+
+namespace Moncine;
+
+final class NotificationService
+{
+    private NotificationRepository $repo;
+
+    public function __construct()
+    {
+        $this->repo = new NotificationRepository();
+    }
+
+    public static function isAvailable(): bool
+    {
+        return NotificationRepository::tableExists();
+    }
+
+    public function countUnread(int $userId): int
+    {
+        if (!self::isAvailable() || $userId <= 0) {
+            return 0;
+        }
+
+        return $this->repo->countUnread($userId);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listForUser(int $userId): array
+    {
+        if (!self::isAvailable()) {
+            return [];
+        }
+
+        return $this->repo->listForUser($userId);
+    }
+
+    public function markRead(int $notificationId, int $userId): bool
+    {
+        if (!self::isAvailable()) {
+            return false;
+        }
+
+        return $this->repo->markRead($notificationId, $userId);
+    }
+
+    public function markAllRead(int $userId): int
+    {
+        if (!self::isAvailable()) {
+            return 0;
+        }
+
+        return $this->repo->markAllRead($userId);
+    }
+
+    /** Notifie tous les administrateurs actifs d’une nouvelle proposition. */
+    public function notifyAdminsNewSubmission(
+        int $submissionId,
+        string $titre,
+        string $submitterLabel
+    ): void {
+        if (!self::isAvailable() || !CatalogSubmission::isAvailable()) {
+            return;
+        }
+
+        $titre = trim($titre) !== '' ? trim($titre) : 'Œuvre sans titre';
+        $link = '/soumissions-catalogue.php?id=' . $submissionId;
+        $title = 'Nouvelle proposition au catalogue';
+        $body = $submitterLabel . ' propose « ' . $titre . ' ».';
+
+        foreach ((new UtilisateurRepository())->listActiveAdmins() as $admin) {
+            $adminId = (int) ($admin['id'] ?? 0);
+            if ($adminId <= 0) {
+                continue;
+            }
+
+            $this->repo->insert(
+                $adminId,
+                NotificationRepository::KIND_SUBMISSION_NEW,
+                $title,
+                $body,
+                $link,
+                $submissionId
+            );
+
+            $email = trim((string) ($admin['email'] ?? ''));
+            if ($email !== '') {
+                MailService::sendCatalogSubmissionNewToAdmin(
+                    $email,
+                    View::userDisplayName($admin),
+                    $titre,
+                    $submitterLabel,
+                    AppUrl::path($link)
+                );
+            }
+        }
+    }
+
+    public function notifyUserSubmissionApproved(
+        int $userId,
+        int $submissionId,
+        int $oeuvreId,
+        string $titre,
+        string $reviewNote = ''
+    ): void {
+        if (!self::isAvailable() || $userId <= 0) {
+            return;
+        }
+
+        $titre = trim($titre) !== '' ? trim($titre) : 'votre proposition';
+        $link = '/mes-soumissions.php';
+        $title = 'Proposition acceptée';
+        $body = '« ' . $titre . ' » a été ajoutée au catalogue Moncine.';
+        if (trim($reviewNote) !== '') {
+            $body .= "\n\nMessage : " . trim($reviewNote);
+        }
+
+        $this->repo->insert(
+            $userId,
+            NotificationRepository::KIND_SUBMISSION_APPROVED,
+            $title,
+            $body,
+            $link,
+            $submissionId,
+            $oeuvreId > 0 ? $oeuvreId : null
+        );
+
+        $this->sendUserEmail($userId, $title, $body, $link);
+    }
+
+    public function notifyUserSubmissionRejected(
+        int $userId,
+        int $submissionId,
+        string $titre,
+        string $reviewNote = ''
+    ): void {
+        if (!self::isAvailable() || $userId <= 0) {
+            return;
+        }
+
+        $titre = trim($titre) !== '' ? trim($titre) : 'votre proposition';
+        $link = '/mes-soumissions.php';
+        $title = 'Proposition refusée';
+        $body = '« ' . $titre . ' » n’a pas été ajoutée au catalogue.';
+        if (trim($reviewNote) !== '') {
+            $body .= "\n\nMessage : " . trim($reviewNote);
+        } else {
+            $body .= ' Consultez Mes propositions pour plus de détails.';
+        }
+
+        $this->repo->insert(
+            $userId,
+            NotificationRepository::KIND_SUBMISSION_REJECTED,
+            $title,
+            $body,
+            $link,
+            $submissionId
+        );
+
+        $this->sendUserEmail($userId, $title, $body, $link);
+    }
+
+    private function sendUserEmail(int $userId, string $subject, string $body, string $path): void
+    {
+        $user = (new UtilisateurRepository())->findById($userId);
+        if ($user === null) {
+            return;
+        }
+
+        $email = trim((string) ($user['email'] ?? ''));
+        if ($email === '') {
+            return;
+        }
+
+        MailService::sendNotification(
+            $email,
+            View::userDisplayName($user),
+            $subject,
+            $body,
+            AppUrl::path($path)
+        );
+    }
+}

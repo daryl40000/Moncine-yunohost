@@ -36,6 +36,7 @@ final class View
             'sagas',
             'statistiques',
             'catalogue',
+            'oeuvre',
             'maintenance-catalogue',
         ], true);
     }
@@ -202,7 +203,7 @@ final class View
             $params['catalog_page'] = (string) $catalogPage;
         }
 
-        return '/oeuvre.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        return '/oeuvre.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986) . '#catalog-oeuvre-nav';
     }
 
     /** Page d’administration du catalogue (liste des œuvres). */

@@ -17,16 +17,15 @@ $sortBy = $sortBy ?? 'titre';
 $sortDir = $sortDir ?? 'asc';
 $totalCount = (int) ($totalCount ?? 0);
 $paginationIdSuffix = (string) ($paginationIdSuffix ?? '');
-$listAnchor = '#catalogue-list';
 
 if ($totalPages <= 1) {
     return;
 }
 
-$pageLink = static function (int $targetPage) use ($search, $sortBy, $sortDir, $totalPages, $listAnchor): string {
+$pageLink = static function (int $targetPage) use ($search, $sortBy, $sortDir, $totalPages): string {
     $targetPage = max(1, min($targetPage, $totalPages));
 
-    return Moncine\View::catalogueUrl($search, $sortBy, $sortDir, $targetPage) . $listAnchor;
+    return Moncine\View::catalogueUrl($search, $sortBy, $sortDir, $targetPage) . '#catalog-list-nav';
 };
 
 $gotoPageId = 'catalog_goto_page' . $paginationIdSuffix;
@@ -56,7 +55,7 @@ $gotoPageId = 'catalog_goto_page' . $paginationIdSuffix;
         <?php endif; ?>
     </div>
 
-    <form method="get" action="/catalogue.php<?= $listAnchor ?>" class="list-pager__goto catalog-list-pager__goto">
+    <form method="get" action="/catalogue.php#catalog-list-nav" class="list-pager__goto catalog-list-pager__goto">
         <?php if (trim($search) !== ''): ?>
             <input type="hidden" name="q" value="<?= Moncine\View::escape($search) ?>">
         <?php endif; ?>

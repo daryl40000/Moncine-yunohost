@@ -26,6 +26,40 @@ final class MailService
         return self::send($toEmail, $subject, $body);
     }
 
+    public static function sendCatalogSubmissionNewToAdmin(
+        string $toEmail,
+        string $adminName,
+        string $titre,
+        string $submitterLabel,
+        string $reviewUrl
+    ): bool {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Nouvelle proposition au catalogue';
+        $body = "Bonjour " . $adminName . ",\n\n"
+            . $submitterLabel . " a proposé l’œuvre « " . $titre . " » pour le catalogue.\n\n"
+            . "Examiner la proposition :\n" . $reviewUrl . "\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendNotification(
+        string $toEmail,
+        string $userName,
+        string $subjectLine,
+        string $messageBody,
+        string $appUrl
+    ): bool {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — ' . $subjectLine;
+        $body = "Bonjour " . $userName . ",\n\n"
+            . $messageBody . "\n\n"
+            . "Voir dans Moncine :\n" . $appUrl . "\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
     public static function send(string $to, string $subject, string $body): bool
     {
         $to = trim($to);

@@ -37,8 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+/** Décalage sous l’en-tête fixe (aligné sur scroll-margin-top des barres de navigation). */
+const LIST_NAV_SCROLL_OFFSET_PX = 88;
+
 /**
- * Ancres #film-detail et #catalogue-list : garder la vue sur la liste / la fiche.
+ * Ancres #film-list-nav, #catalog-list-nav, #catalog-oeuvre-nav : cadrage sous l’en-tête.
  */
 function initListAnchors() {
     const scrollToHash = () => {
@@ -46,11 +49,20 @@ function initListAnchors() {
         if (!hash || hash.length < 2) {
             return;
         }
-        const target = document.querySelector(hash);
+        let target = document.querySelector(hash);
+        if (!target && hash === '#film-detail') {
+            target = document.getElementById('film-list-nav');
+        }
         if (!target) {
             return;
         }
-        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+
+        const top = target.getBoundingClientRect().top + window.scrollY - LIST_NAV_SCROLL_OFFSET_PX;
+        const root = document.documentElement;
+        const prevScrollBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo(0, Math.max(0, top));
+        root.style.scrollBehavior = prevScrollBehavior;
     };
 
     if (!window.location.hash) {
@@ -58,7 +70,6 @@ function initListAnchors() {
     }
 
     scrollToHash();
-    requestAnimationFrame(scrollToHash);
 }
 
 /**

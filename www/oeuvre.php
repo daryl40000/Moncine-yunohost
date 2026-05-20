@@ -8,6 +8,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\CatalogAdmin;
+use Moncine\CatalogListContext;
 use Moncine\TmdbConfig;
 use Moncine\View;
 
@@ -17,11 +18,12 @@ $oeuvreId = (int) ($_GET['id'] ?? 0);
 $admin = new CatalogAdmin();
 $detail = $oeuvreId > 0 ? $admin->findOeuvreDetail($oeuvreId) : null;
 
-$catalogSearch = trim((string) ($_GET['catalog_q'] ?? ''));
-$catalogSort = (string) ($_GET['catalog_sort'] ?? 'titre');
-$catalogDir = (string) ($_GET['catalog_dir'] ?? 'asc');
-$catalogPage = max(1, (int) ($_GET['catalog_page'] ?? 1));
-$catalogueBackUrl = View::catalogueUrl($catalogSearch, $catalogSort, $catalogDir, $catalogPage);
+$catalogListContext = CatalogListContext::fromQuery($_GET);
+$catalogSearch = $catalogListContext->search();
+$catalogSort = $catalogListContext->sortBy();
+$catalogDir = $catalogListContext->sortDir();
+$catalogPage = $catalogListContext->page();
+$catalogueBackUrl = $catalogListContext->backUrl();
 
 if ($detail === null) {
     View::render('oeuvre', [
@@ -65,8 +67,12 @@ if (isset($_GET['poster_uploaded']) && (string) $_GET['poster_uploaded'] === '1'
     }
 }
 
+$oeuvreNav = $admin->getOeuvreNavigation($oeuvreId, $catalogSearch, $catalogSort, $catalogDir);
+
 View::render('oeuvre', [
     'pageTitle' => (string) ($oeuvre['titre'] ?? 'Œuvre catalogue'),
+    'catalogListContext' => $catalogListContext,
+    'oeuvreNav' => $oeuvreNav,
     'oeuvre' => $oeuvre,
     'library' => $detail['library'],
     'libraryCount' => (int) $detail['library_count'],

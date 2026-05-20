@@ -848,6 +848,26 @@ textarea {
     justify-content: center;
 }
 
+/* Ancre + barre Préc./Suiv. : visible sous l’en-tête au changement de fiche */
+#film-list-nav {
+    scroll-margin-top: 5.5rem;
+}
+
+.film-list-nav-anchor {
+    position: sticky;
+    top: 4.75rem;
+    z-index: 90;
+    margin: 0.35rem 0 0.85rem;
+    padding: 0.15rem 0 0.35rem;
+    background: var(--bg);
+    box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.65);
+}
+
+.film-list-nav-anchor .film-list-pager {
+    margin: 0;
+    border-bottom: 1px solid var(--border);
+}
+
 .film-detail__body > .film-list-pager {
     margin-top: 1.25rem;
 }
@@ -938,6 +958,41 @@ textarea {
 #film-detail,
 #catalogue-list {
     scroll-margin-top: 5.5rem;
+}
+
+#catalog-list-nav,
+#catalog-oeuvre-nav {
+    scroll-margin-top: 5.5rem;
+}
+
+.catalog-list-nav-anchor,
+.catalog-oeuvre-nav-anchor {
+    position: sticky;
+    top: 4.75rem;
+    z-index: 90;
+    margin: 0.35rem 0 0.85rem;
+    padding: 0.15rem 0 0.35rem;
+    background: var(--bg);
+    box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.65);
+}
+
+.catalog-list-nav-anchor .catalog-list-pager,
+.catalog-oeuvre-nav-anchor .catalog-oeuvre-pager {
+    margin: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.catalog-oeuvre-pager {
+    justify-content: center;
+}
+
+.film-detail__body > .catalog-oeuvre-pager {
+    margin-top: 1.25rem;
+}
+
+.catalog-admin-table__actions .btn-icon {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
 }
 
 .site-nav__admin {
@@ -2453,6 +2508,105 @@ textarea {
 .btn-sm {
     padding: 0.35rem 0.75rem;
     font-size: 0.9rem;
+}
+
+/* Propositions catalogue (phase 5) */
+.catalog-submission-page .lead,
+.catalog-submission-admin .lead {
+    max-width: 42rem;
+}
+
+.submission-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.submission-badge--pending {
+    background: #fff3cd;
+    color: #664d03;
+}
+
+.submission-badge--approved {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.submission-badge--rejected {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.submission-user-note {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--accent, #3d6b9c);
+    background: var(--surface-muted, #f4f6f8);
+}
+
+.form-actions--stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+}
+
+.catalog-submission-table td {
+    vertical-align: top;
+}
+
+/* Notifications */
+.notifications-page__mark-all {
+    margin-bottom: 1rem;
+}
+
+.notification-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.notification-list__item {
+    border-bottom: 1px solid var(--border, #e2e6ea);
+}
+
+.notification-list__item--unread {
+    background: var(--surface-muted, #f4f8fc);
+}
+
+.notification-list__link {
+    display: block;
+    padding: 0.85rem 0.5rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.notification-list__link:hover {
+    background: var(--surface-hover, #eef2f6);
+}
+
+.notification-list__title {
+    display: block;
+    font-weight: 600;
+}
+
+.notification-list__body {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.95rem;
+    white-space: pre-line;
+}
+
+.notification-list__date {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.site-nav__notifications {
+    font-weight: 500;
 }
 
 @media (max-width: 520px) {

@@ -246,6 +246,21 @@ final class UtilisateurRepository
         )->fetchColumn();
     }
 
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listActiveAdmins(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT ' . self::PUBLIC_COLUMNS . "
+             FROM utilisateurs
+             WHERE role = 'admin' AND actif = 1
+             ORDER BY nom COLLATE FRENCH_NOCASE"
+        );
+
+        return $stmt ? ($stmt->fetchAll() ?: []) : [];
+    }
+
     public function countLibraryEntries(int $userId): int
     {
         if ($userId <= 0) {

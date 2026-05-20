@@ -11,7 +11,7 @@ $minLen = Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH;
 $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
 ?>
 <section class="account-page">
-    <h1>Paramètres</h1>
+    <h1>Mon compte</h1>
     <p class="lead">
         Modifiez les informations de votre compte
         (<strong><?= Moncine\View::escape($displayName) ?></strong>).

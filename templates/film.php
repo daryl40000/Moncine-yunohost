@@ -63,7 +63,9 @@
             <span><?= Moncine\View::escape($film['titre']) ?></span>
         </p>
 
-        <?php require MONCINE_ROOT . '/templates/_film_list_nav.php'; ?>
+        <div id="film-list-nav" class="film-list-nav-anchor">
+            <?php require MONCINE_ROOT . '/templates/_film_list_nav.php'; ?>
+        </div>
         <?php if ($isWishlist): ?>
             <p class="hint film-wishlist-badge">Ce film est dans vos envies (pas encore dans vos films).</p>
         <?php endif; ?>
