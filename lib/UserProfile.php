@@ -1,6 +1,6 @@
 <?php
 /**
- * Affichage et validation du profil utilisateur (nom, prénom, pseudo).
+ * Affichage et validation du profil utilisateur (nom, prénom, pseudo, ville).
  */
 
 declare(strict_types=1);
@@ -10,6 +10,8 @@ namespace Moncine;
 final class UserProfile
 {
     public const MAX_PSEUDO_LENGTH = 40;
+
+    public const MAX_VILLE_LENGTH = 80;
 
     /** Nom affiché dans l’interface : pseudo, sinon « Prénom Nom ». */
     public static function displayName(array $user): string
@@ -46,6 +48,26 @@ final class UserProfile
         }
 
         return $pseudo;
+    }
+
+    public static function sanitizeVille(string $ville): string
+    {
+        $ville = trim($ville);
+        if ($ville === '') {
+            return '';
+        }
+
+        if (mb_strlen($ville, 'UTF-8') > self::MAX_VILLE_LENGTH) {
+            $ville = mb_substr($ville, 0, self::MAX_VILLE_LENGTH, 'UTF-8');
+        }
+
+        return $ville;
+    }
+
+    /** Compte visible dans la recherche par pseudo / ville. */
+    public static function isSearchable(array $user): bool
+    {
+        return (int) ($user['searchable'] ?? 1) === 1;
     }
 
     /**

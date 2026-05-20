@@ -31,12 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
 
     if ($action === 'profile') {
+        $searchable = (string) ($_POST['searchable'] ?? '0') === '1';
         $result = $repo->updateProfile(
             $userId,
             (string) ($_POST['nom'] ?? ''),
             (string) ($_POST['prenom'] ?? ''),
             (string) ($_POST['email'] ?? ''),
-            (string) ($_POST['pseudo'] ?? '')
+            (string) ($_POST['pseudo'] ?? ''),
+            (string) ($_POST['ville'] ?? ''),
+            $searchable
         );
         if ($result === true) {
             $success = 'Profil mis à jour.';
@@ -72,4 +75,6 @@ View::render('parametres', [
     'error' => $error,
     'success' => $success,
     'maxPseudoLength' => UserProfile::MAX_PSEUDO_LENGTH,
+    'maxVilleLength' => UserProfile::MAX_VILLE_LENGTH,
+    'isSearchable' => UserProfile::isSearchable($user),
 ]);

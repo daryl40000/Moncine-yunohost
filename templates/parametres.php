@@ -6,6 +6,8 @@
  * @var string $error
  * @var string $success
  * @var int $maxPseudoLength
+ * @var int $maxVilleLength
+ * @var bool $isSearchable
  */
 $minLen = Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH;
 $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
@@ -45,6 +47,21 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
                        placeholder="Optionnel — affiché à la place du prénom et du nom"
                        value="<?= Moncine\View::escape((string) ($user['pseudo'] ?? '')) ?>">
                 <p class="hint">Si vous renseignez un pseudo, c’est lui qui sera affiché dans l’application.</p>
+
+                <label for="account_ville">Ville</label>
+                <input type="text" name="ville" id="account_ville" autocomplete="address-level2"
+                       maxlength="<?= (int) $maxVilleLength ?>"
+                       placeholder="Optionnel — pour une future recherche « autour de moi »"
+                       value="<?= Moncine\View::escape((string) ($user['ville'] ?? '')) ?>">
+                <p class="hint">La ville n’est pas obligatoire. Elle pourra servir plus tard à trouver des utilisateurs proches de chez vous.</p>
+
+                <label class="checkbox-label">
+                    <input type="hidden" name="searchable" value="0">
+                    <input type="checkbox" name="searchable" value="1"
+                           <?= $isSearchable ? ' checked' : '' ?>>
+                    Apparaître dans la recherche d’utilisateurs (par pseudo et ville)
+                </label>
+                <p class="hint">Si vous décochez cette case, les autres ne pourront pas vous trouver via la recherche.</p>
 
                 <label for="account_email">E-mail</label>
                 <input type="email" name="email" id="account_email" required autocomplete="email"
@@ -86,6 +103,8 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
     </details>
 
     <p class="collection-page__footer-links">
+        <a href="/rechercher-utilisateurs.php">Rechercher des utilisateurs</a>
+        ·
         <a href="/">← Accueil</a>
     </p>
 </section>

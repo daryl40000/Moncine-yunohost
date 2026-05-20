@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     nom TEXT NOT NULL DEFAULT '',
     prenom TEXT NOT NULL DEFAULT '',
     pseudo TEXT NOT NULL DEFAULT '',
+    ville TEXT NOT NULL DEFAULT '',
+    searchable INTEGER NOT NULL DEFAULT 1,
     email TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL DEFAULT '',
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),

@@ -44,11 +44,32 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
 <body<?= !empty($wideLayout) ? ' class="page-wide"' : '' ?>>
     <header class="site-header" id="site-header">
         <div class="container site-header__inner">
-            <a href="/" class="logo">
-                <img class="logo__img" src="/assets/img/logo.png"
-                     alt="<?= Moncine\View::escape(MONCINE_APP_NAME) ?>"
-                     width="56" height="56" decoding="async">
-            </a>
+            <div class="site-header__brand">
+                <a href="/" class="logo">
+                    <img class="logo__img" src="/assets/img/logo.png"
+                         alt="<?= Moncine\View::escape(MONCINE_APP_NAME) ?>"
+                         width="56" height="56" decoding="async">
+                </a>
+                <?php if ($notificationsAvailable): ?>
+                    <?php
+                    $notifLabel = 'Notifications';
+                    if ($unreadNotifications > 0) {
+                        $notifLabel .= ' — ' . (int) $unreadNotifications . ' non lue' . ($unreadNotifications > 1 ? 's' : '');
+                    }
+                    ?>
+                    <a href="/notifications.php"
+                       class="header-notifications<?= $currentPath === '/notifications.php' ? ' header-notifications--current' : '' ?>"
+                       aria-label="<?= Moncine\View::escape($notifLabel) ?>"
+                       title="<?= Moncine\View::escape($notifLabel) ?>">
+                        <svg class="header-notifications__icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.25-6.77V3a.75.75 0 0 0-1.5 0v1.26A7.002 7.002 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/>
+                        </svg>
+                        <?php if ($unreadNotifications > 0): ?>
+                            <span class="header-notifications__badge" aria-hidden="true"><?= $unreadNotifications > 9 ? '9+' : (int) $unreadNotifications ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endif; ?>
+            </div>
             <button type="button" class="nav-toggle" id="nav-toggle"
                     aria-expanded="false" aria-controls="site-nav"
                     aria-label="Ouvrir le menu">
@@ -63,12 +84,6 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                 <a href="/souhaits.php"<?= $currentPath === '/souhaits.php' ? ' aria-current="page"' : '' ?>>Mes envies</a>
                 <a href="/statistiques.php"<?= $currentPath === '/statistiques.php' ? ' aria-current="page"' : '' ?>>Statistiques</a>
 
-                <?php if ($notificationsAvailable): ?>
-                    <a href="/notifications.php" class="site-nav__notifications"<?= $currentPath === '/notifications.php' ? ' aria-current="page"' : '' ?>>
-                        Notifications<?= $unreadNotifications > 0 ? ' (' . (int) $unreadNotifications . ')' : '' ?>
-                    </a>
-                <?php endif; ?>
-
                 <?php
                 $parametresPaths = [
                     '/parametres.php',
@@ -76,6 +91,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     '/import.php',
                     '/proposer-oeuvre.php',
                     '/mes-soumissions.php',
+                    '/rechercher-utilisateurs.php',
                 ];
                 $parametresOpen = in_array($currentPath, $parametresPaths, true);
                 ?>
@@ -83,6 +99,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     <summary class="site-nav__menu-summary site-nav__settings">Paramètres</summary>
                     <div class="site-nav__submenu" role="group" aria-label="Paramètres et compte">
                         <a href="/parametres.php"<?= in_array($currentPath, ['/parametres.php', '/mon-compte.php'], true) ? ' aria-current="page"' : '' ?>>Compte</a>
+                        <a href="/rechercher-utilisateurs.php"<?= $currentPath === '/rechercher-utilisateurs.php' ? ' aria-current="page"' : '' ?>>Rechercher des utilisateurs</a>
                         <?php if ($canProposeToCatalog): ?>
                             <a href="/proposer-oeuvre.php"<?= in_array($currentPath, ['/proposer-oeuvre.php', '/mes-soumissions.php'], true) ? ' aria-current="page"' : '' ?>>
                                 Proposer au catalogue

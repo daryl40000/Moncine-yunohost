@@ -17,7 +17,7 @@ final class UtilisateurRepository
   /** Limite pour éviter les abus (charge CPU du hachage). */
     public const MAX_PASSWORD_LENGTH = 128;
 
-    private const PUBLIC_COLUMNS = 'id, nom, prenom, pseudo, email, role, actif, foyer_id, last_login_at, created_at';
+    private const PUBLIC_COLUMNS = 'id, nom, prenom, pseudo, ville, searchable, email, role, actif, foyer_id, last_login_at, created_at';
 
     private PDO $db;
 
@@ -372,16 +372,61 @@ final class UtilisateurRepository
     /**
      * @return true|string
      */
+    /**
+     * Utilisateurs actifs acceptant d’apparaître dans la recherche (pseudo et/ou ville).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searchDiscoverableUsers(string $pseudoQuery, string $villeQuery, int $excludeUserId): array
+    {
+        $pseudoQuery = UserProfile::sanitizePseudo($pseudoQuery);
+        $villeQuery = UserProfile::sanitizeVille($villeQuery);
+
+        if ($pseudoQuery === '' && $villeQuery === '') {
+            return [];
+        }
+
+        $conditions = ['actif = 1', 'searchable = 1'];
+        $params = [];
+
+        if ($excludeUserId > 0) {
+            $conditions[] = 'id != ?';
+            $params[] = $excludeUserId;
+        }
+
+        if ($pseudoQuery !== '') {
+            $conditions[] = 'LOWER(TRIM(pseudo)) LIKE ?';
+            $params[] = '%' . mb_strtolower($pseudoQuery, 'UTF-8') . '%';
+        }
+
+        if ($villeQuery !== '') {
+            $conditions[] = 'LOWER(TRIM(ville)) LIKE ?';
+            $params[] = '%' . mb_strtolower($villeQuery, 'UTF-8') . '%';
+        }
+
+        $sql = 'SELECT id, nom, prenom, pseudo, ville FROM utilisateurs WHERE '
+            . implode(' AND ', $conditions)
+            . ' ORDER BY pseudo COLLATE FRENCH_NOCASE, nom COLLATE FRENCH_NOCASE LIMIT 50';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
     public function updateProfile(
         int $id,
         string $nom,
         string $prenom,
         string $email,
-        string $pseudo = ''
+        string $pseudo = '',
+        string $ville = '',
+        bool $searchable = true
     ): bool|string {
         $nom = trim($nom);
         $prenom = trim($prenom);
         $pseudo = UserProfile::sanitizePseudo($pseudo);
+        $ville = UserProfile::sanitizeVille($ville);
         $email = mb_strtolower(trim($email), 'UTF-8');
 
         if ($id <= 0) {
@@ -403,9 +448,9 @@ final class UtilisateurRepository
         }
 
         $stmt = $this->db->prepare(
-            'UPDATE utilisateurs SET nom = ?, prenom = ?, pseudo = ?, email = ? WHERE id = ?'
+            'UPDATE utilisateurs SET nom = ?, prenom = ?, pseudo = ?, ville = ?, searchable = ?, email = ? WHERE id = ?'
         );
-        $stmt->execute([$nom, $prenom, $pseudo, $email, $id]);
+        $stmt->execute([$nom, $prenom, $pseudo, $ville, $searchable ? 1 : 0, $email, $id]);
 
         return $stmt->rowCount() > 0 ? true : 'Compte introuvable.';
     }
