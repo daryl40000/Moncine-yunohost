@@ -121,12 +121,7 @@ final class UtilisateurRepository
             return self::passwordValidationMessage();
         }
 
-        if ($foyerId <= 0) {
-            $foyers = (new FoyerRepository())->listAll();
-            if ($foyers !== []) {
-                $foyerId = (int) ($foyers[0]['id'] ?? 0);
-            }
-        } elseif ((new FoyerRepository())->findById($foyerId) === null) {
+        if ($foyerId > 0 && (new FoyerRepository())->findById($foyerId) === null) {
             return 'Foyer introuvable.';
         }
 

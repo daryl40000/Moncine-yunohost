@@ -167,6 +167,65 @@ final class NotificationService
         $this->sendUserEmail($userId, $title, $body, $link);
     }
 
+    public function notifyFriendRequest(int $addresseeId, int $requesterId): void
+    {
+        if (!self::isAvailable() || !FriendshipRepository::isAvailable()) {
+            return;
+        }
+        $requester = (new UtilisateurRepository())->findById($requesterId);
+        if ($requester === null) {
+            return;
+        }
+        $label = View::userDisplayName($requester);
+        $title = 'Nouvelle demande d’ami';
+        $body = $label . ' souhaite vous ajouter comme ami.';
+        $link = '/mes-amis.php';
+
+        $this->repo->insert($addresseeId, NotificationRepository::KIND_FRIEND_REQUEST, $title, $body, $link);
+        $this->sendUserEmail($addresseeId, $title, $body, $link);
+    }
+
+    public function notifyFriendAccepted(int $requesterId, int $accepterId): void
+    {
+        if (!self::isAvailable() || !FriendshipRepository::isAvailable()) {
+            return;
+        }
+        $accepter = (new UtilisateurRepository())->findById($accepterId);
+        if ($accepter === null) {
+            return;
+        }
+        $label = View::userDisplayName($accepter);
+        $title = 'Demande d’ami acceptée';
+        $body = $label . ' a accepté votre demande d’ami.';
+        $link = '/mes-amis.php';
+
+        $this->repo->insert($requesterId, NotificationRepository::KIND_FRIEND_ACCEPTED, $title, $body, $link);
+        $this->sendUserEmail($requesterId, $title, $body, $link);
+    }
+
+    public function notifyGroupInvitation(
+        int $inviteeId,
+        int $inviterId,
+        string $groupName,
+        int $invitationId
+    ): void {
+        if (!self::isAvailable() || !FamilyGroupService::isAvailable()) {
+            return;
+        }
+        $inviter = (new UtilisateurRepository())->findById($inviterId);
+        if ($inviter === null) {
+            return;
+        }
+        $label = View::userDisplayName($inviter);
+        $groupName = trim($groupName) !== '' ? trim($groupName) : 'un groupe famille';
+        $title = 'Invitation à un groupe famille';
+        $body = $label . ' vous invite à rejoindre « ' . $groupName . ' ».';
+        $link = '/mes-groupes.php';
+
+        $this->repo->insert($inviteeId, NotificationRepository::KIND_GROUP_INVITE, $title, $body, $link);
+        $this->sendUserEmail($inviteeId, $title, $body, $link);
+    }
+
     private function sendUserEmail(int $userId, string $subject, string $body, string $path): void
     {
         $user = (new UtilisateurRepository())->findById($userId);

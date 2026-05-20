@@ -34,8 +34,9 @@ final class FoyerRepository
         if ($id <= 0) {
             return null;
         }
+        $cols = self::isExtendedSchema() ? 'id, nom, kind, created_by_user_id, created_at' : 'id, nom, created_at';
         $stmt = $this->db->prepare(
-            'SELECT id, nom, created_at FROM foyers WHERE id = ? LIMIT 1'
+            'SELECT ' . $cols . ' FROM foyers WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
         $row = $stmt->fetch();
@@ -62,6 +63,9 @@ final class FoyerRepository
         if ($foyerId <= 0) {
             return [];
         }
+        if (FamilyGroupService::isAvailable()) {
+            return (new FamilyGroupService())->listMembers($foyerId);
+        }
         $stmt = $this->db->prepare(
             'SELECT id, nom, email, role, actif, last_login_at, created_at
              FROM utilisateurs
@@ -78,10 +82,25 @@ final class FoyerRepository
         if ($foyerId <= 0) {
             return 0;
         }
+        if (FamilyGroupService::isAvailable()) {
+            $stmt = $this->db->prepare('SELECT COUNT(*) FROM group_members WHERE foyer_id = ?');
+            $stmt->execute([$foyerId]);
+
+            return (int) $stmt->fetchColumn();
+        }
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM utilisateurs WHERE foyer_id = ?');
         $stmt->execute([$foyerId]);
 
         return (int) $stmt->fetchColumn();
+    }
+
+    private static function isExtendedSchema(): bool
+    {
+        $stmt = Database::getInstance()->query(
+            "SELECT 1 FROM pragma_table_info('foyers') WHERE name = 'kind' LIMIT 1"
+        );
+
+        return (bool) $stmt->fetchColumn();
     }
 
     /** @return int|string */
@@ -164,11 +183,33 @@ final class FoyerRepository
         $this->db->prepare('UPDATE utilisateurs SET foyer_id = ? WHERE id = ?')
             ->execute([$foyerId, $userId]);
 
+        if (FamilyGroupService::isAvailable()) {
+            $stmt = $this->db->prepare(
+                'SELECT 1 FROM group_members WHERE foyer_id = ? AND user_id = ? LIMIT 1'
+            );
+            $stmt->execute([$foyerId, $userId]);
+            if (!$stmt->fetchColumn()) {
+                $this->db->prepare(
+                    'INSERT INTO group_members (foyer_id, user_id, role, joined_at)
+                     VALUES (?, ?, ?, datetime(\'now\'))'
+                )->execute([$foyerId, $userId, FamilyGroupService::ROLE_MEMBER]);
+            }
+        }
+
         return true;
     }
 
     public function createDefaultForUser(int $userId, string $nom = self::DEFAULT_NAME): int
     {
+        if (FamilyGroupService::isAvailable()) {
+            $result = (new FamilyGroupService())->createGroup($userId, $nom);
+            if (!is_int($result)) {
+                throw new \RuntimeException((string) $result);
+            }
+
+            return $result;
+        }
+
         $foyerId = $this->create($nom);
         if (!is_int($foyerId)) {
             throw new \RuntimeException((string) $foyerId);

@@ -33,4 +33,11 @@ final class UserProfileTest extends TestCase
         $result = UserProfile::validateIdentityFields('', '', '');
         $this->assertIsString($result);
     }
+
+    public function testSanitizeVilleTrimsAndLimitsLength(): void
+    {
+        $long = str_repeat('é', 100);
+        $ville = UserProfile::sanitizeVille('  ' . $long . '  ');
+        $this->assertSame(UserProfile::MAX_VILLE_LENGTH, mb_strlen($ville, 'UTF-8'));
+    }
 }

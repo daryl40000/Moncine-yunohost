@@ -14,6 +14,9 @@ final class NotificationRepository
     public const KIND_SUBMISSION_NEW = 'catalogue_submission_new';
     public const KIND_SUBMISSION_APPROVED = 'catalogue_submission_approved';
     public const KIND_SUBMISSION_REJECTED = 'catalogue_submission_rejected';
+    public const KIND_FRIEND_REQUEST = 'friend_request';
+    public const KIND_FRIEND_ACCEPTED = 'friend_accepted';
+    public const KIND_GROUP_INVITE = 'group_invite';
 
     private PDO $db;
 

@@ -88,10 +88,12 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                 $parametresPaths = [
                     '/parametres.php',
                     '/mon-compte.php',
+                    '/mes-amis.php',
+                    '/mes-groupes.php',
+                    '/rechercher-utilisateurs.php',
                     '/import.php',
                     '/proposer-oeuvre.php',
                     '/mes-soumissions.php',
-                    '/rechercher-utilisateurs.php',
                 ];
                 $parametresOpen = in_array($currentPath, $parametresPaths, true);
                 ?>
@@ -99,6 +101,8 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     <summary class="site-nav__menu-summary site-nav__settings">Paramètres</summary>
                     <div class="site-nav__submenu" role="group" aria-label="Paramètres et compte">
                         <a href="/parametres.php"<?= in_array($currentPath, ['/parametres.php', '/mon-compte.php'], true) ? ' aria-current="page"' : '' ?>>Compte</a>
+                        <a href="/mes-amis.php"<?= $currentPath === '/mes-amis.php' ? ' aria-current="page"' : '' ?>>Mes amis</a>
+                        <a href="/mes-groupes.php"<?= $currentPath === '/mes-groupes.php' ? ' aria-current="page"' : '' ?>>Mon groupe famille</a>
                         <a href="/rechercher-utilisateurs.php"<?= $currentPath === '/rechercher-utilisateurs.php' ? ' aria-current="page"' : '' ?>>Rechercher des utilisateurs</a>
                         <?php if ($canProposeToCatalog): ?>
                             <a href="/proposer-oeuvre.php"<?= in_array($currentPath, ['/proposer-oeuvre.php', '/mes-soumissions.php'], true) ? ' aria-current="page"' : '' ?>>
@@ -130,7 +134,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                                 </a>
                             <?php endif; ?>
                             <a href="/maintenance-catalogue.php" class="site-nav__admin"<?= $currentPath === '/maintenance-catalogue.php' ? ' aria-current="page"' : '' ?>>Maintenance</a>
-                            <a href="/foyers.php" class="site-nav__admin"<?= $currentPath === '/foyers.php' ? ' aria-current="page"' : '' ?>>Foyers</a>
+                            <a href="/foyers.php" class="site-nav__admin"<?= $currentPath === '/foyers.php' ? ' aria-current="page"' : '' ?>>Groupes famille</a>
                             <a href="/utilisateurs.php" class="site-nav__admin"<?= $currentPath === '/utilisateurs.php' ? ' aria-current="page"' : '' ?>>Comptes utilisateurs</a>
                         </div>
                     </details>

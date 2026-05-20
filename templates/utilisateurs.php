@@ -10,8 +10,8 @@
 <section class="users-admin-page">
     <h1>Comptes utilisateurs</h1>
     <p class="lead">
-        Les membres d’un même <a href="/foyers.php">foyer</a> partagent la collection ;
-        leurs envies et notes restent personnelles.
+        Les groupes famille sont gérés par les utilisateurs (<strong>Mes amis</strong>, <strong>Mon groupe famille</strong>).
+        Consultation des groupes : <a href="/foyers.php">Groupes famille</a>.
     </p>
 
     <?php if ($success !== ''): ?>
@@ -42,14 +42,6 @@
                        minlength="<?= Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH ?>"
                        maxlength="<?= Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH ?>"
                        autocomplete="new-password">
-                <label for="new_foyer">Foyer</label>
-                <select name="foyer_id" id="new_foyer">
-                    <?php foreach ($foyers as $foyer): ?>
-                        <option value="<?= (int) ($foyer['id'] ?? 0) ?>">
-                            <?= Moncine\View::escape((string) ($foyer['nom'] ?? '')) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
                 <label for="new_role">Rôle</label>
                 <select name="role" id="new_role">
                     <option value="<?= Moncine\View::escape(Moncine\UserRole::USER) ?>">
@@ -87,21 +79,11 @@
                         <td><?= Moncine\View::escape(Moncine\View::userDisplayName($user)) ?></td>
                         <td><?= Moncine\View::escape((string) ($user['email'] ?? '')) ?></td>
                         <td>
-                            <form method="post" action="/utilisateurs.php" class="inline-form">
-                                <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
-                                <input type="hidden" name="action" value="assign_foyer">
-                                <input type="hidden" name="user_id" value="<?= $uid ?>">
-                                <select name="foyer_id">
-                                    <?php foreach ($foyers as $foyer):
-                                        $fid = (int) ($foyer['id'] ?? 0);
-                                        ?>
-                                        <option value="<?= $fid ?>"<?= $fid === $userFoyerId ? ' selected' : '' ?>>
-                                            <?= Moncine\View::escape((string) ($foyer['nom'] ?? '')) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" class="btn btn-secondary btn-sm">OK</button>
-                            </form>
+                            <?php if (!empty($user['foyer_nom'])): ?>
+                                <?= Moncine\View::escape((string) $user['foyer_nom']) ?>
+                            <?php else: ?>
+                                <span class="hint">Aucun</span>
+                            <?php endif; ?>
                         </td>
                         <td><?= Moncine\View::escape(Moncine\UserRole::label((string) ($user['role'] ?? ''))) ?></td>
                         <td><?= $active ? 'Actif' : 'Désactivé' ?></td>
@@ -141,6 +123,6 @@
     </div>
 
     <p class="collection-page__footer-links">
-        <a href="/foyers.php">Gérer les foyers</a> · <a href="/">Accueil</a>
+        <a href="/foyers.php">Groupes famille (lecture seule)</a> · <a href="/">Accueil</a>
     </p>
 </section>

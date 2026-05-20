@@ -31,22 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['email'] ?? ''),
             (string) ($_POST['password'] ?? ''),
             (string) ($_POST['role'] ?? UserRole::USER),
-            (int) ($_POST['foyer_id'] ?? 0),
+            0,
             (string) ($_POST['prenom'] ?? ''),
             (string) ($_POST['pseudo'] ?? '')
         );
         if (is_int($result)) {
-            $success = 'Compte créé.';
-        } else {
-            $error = (string) $result;
-        }
-    } elseif ($action === 'assign_foyer') {
-        $result = $foyerRepo->assignUser(
-            (int) ($_POST['user_id'] ?? 0),
-            (int) ($_POST['foyer_id'] ?? 0)
-        );
-        if ($result === true) {
-            $success = 'Foyer mis à jour pour ce compte.';
+            $success = 'Compte créé. L’utilisateur pourra rejoindre un groupe famille via Mes groupes.';
         } else {
             $error = (string) $result;
         }

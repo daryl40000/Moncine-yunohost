@@ -103,6 +103,10 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
     </details>
 
     <p class="collection-page__footer-links">
+        <a href="/mes-amis.php">Mes amis</a>
+        ·
+        <a href="/mes-groupes.php">Mon groupe famille</a>
+        ·
         <a href="/rechercher-utilisateurs.php">Rechercher des utilisateurs</a>
         ·
         <a href="/">← Accueil</a>
