@@ -295,12 +295,16 @@ final class View
     public static function wishlistUrl(
         string $searchQuery = '',
         string $sortBy = 'titre',
-        string $sortDir = 'asc'
+        string $sortDir = 'asc',
+        string $scope = WishlistScope::MINE
     ): string {
         $params = [];
         $searchQuery = trim($searchQuery);
         if ($searchQuery !== '') {
             $params['q'] = $searchQuery;
+        }
+        if (WishlistScope::normalize($scope) === WishlistScope::GROUP) {
+            $params['scope'] = WishlistScope::GROUP;
         }
         if ($sortBy !== '' && $sortBy !== 'titre') {
             $params['sort'] = $sortBy;
@@ -316,7 +320,8 @@ final class View
         string $column,
         string $currentSort,
         string $currentDir,
-        string $searchQuery = ''
+        string $searchQuery = '',
+        string $scope = WishlistScope::MINE
     ): string {
         $dir = 'asc';
         if ($currentSort === $column && strtolower($currentDir) === 'asc') {
@@ -331,8 +336,22 @@ final class View
         if ($searchQuery !== '') {
             $params['q'] = $searchQuery;
         }
+        if (WishlistScope::normalize($scope) === WishlistScope::GROUP) {
+            $params['scope'] = WishlistScope::GROUP;
+        }
 
         return '/souhaits.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** @param list<array<string, mixed>> $voters */
+    public static function formatVoterNames(array $voters): string
+    {
+        $names = [];
+        foreach ($voters as $voter) {
+            $names[] = self::userDisplayName($voter);
+        }
+
+        return implode(', ', $names);
     }
 
     /** Indicateur visuel du tri actif (↑ ou ↓). */

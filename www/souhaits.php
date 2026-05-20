@@ -1,6 +1,6 @@
 <?php
 /**
- * Liste des films « Mes envies » (wishlist).
+ * Liste des films « Mes envies » (wishlist) — personnelle ou agrégée du groupe.
  */
 
 declare(strict_types=1);
@@ -9,9 +9,12 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Csrf;
 use Moncine\FilmRepository;
+use Moncine\GroupWishlistRepository;
 use Moncine\LibraryStatut;
 use Moncine\SupportPhysique;
+use Moncine\UserContext;
 use Moncine\View;
+use Moncine\WishlistScope;
 
 if (!(new FilmRepository())->usesCatalogModel()) {
     header('Location: /films.php');
@@ -21,24 +24,55 @@ if (!(new FilmRepository())->usesCatalogModel()) {
 $sortBy = (string) ($_GET['sort'] ?? $_POST['sort'] ?? 'titre');
 $sortDir = (string) ($_GET['dir'] ?? $_POST['dir'] ?? 'asc');
 $query = trim((string) ($_GET['q'] ?? $_POST['q'] ?? ''));
+$scope = WishlistScope::normalize((string) ($_GET['scope'] ?? $_POST['scope'] ?? WishlistScope::MINE));
+
+$foyerId = UserContext::currentFoyerId();
+$groupWishlist = new GroupWishlistRepository();
+$canShowGroup = $groupWishlist->canShowGroupView($foyerId);
+if ($scope === WishlistScope::GROUP && !$canShowGroup) {
+    $scope = WishlistScope::MINE;
+}
+
+if ($scope === WishlistScope::GROUP && !isset($_GET['sort']) && !isset($_POST['sort'])) {
+    $sortBy = 'votes';
+    $sortDir = 'desc';
+}
 
 $repo = new FilmRepository();
+$userId = UserContext::currentUserId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $redirectUrl = View::wishlistUrl($query, $sortBy, $sortDir);
+    $redirectUrl = View::wishlistUrl($query, $sortBy, $sortDir, $scope);
     Csrf::rejectUnlessValid($_POST, $redirectUrl);
+
+    $action = (string) ($_POST['action'] ?? 'promote');
+
+    if ($action === 'vote') {
+        $oeuvreId = max(0, (int) ($_POST['oeuvre_id'] ?? 0));
+        if ($oeuvreId <= 0) {
+            header('Location: ' . $redirectUrl . '&vote_error=' . rawurlencode('Œuvre invalide.'));
+            exit;
+        }
+        $result = $repo->addFromCatalogOeuvre($oeuvreId, LibraryStatut::WISHLIST);
+        if (!is_int($result)) {
+            header('Location: ' . $redirectUrl . '&vote_error=' . rawurlencode((string) $result));
+            exit;
+        }
+        header('Location: ' . $redirectUrl . '&vote_ok=1');
+        exit;
+    }
 
     $filmId = (int) ($_POST['film_id'] ?? 0);
     $supportRaw = (string) ($_POST['support_physique'] ?? '');
     $supportKey = SupportPhysique::normalize($supportRaw);
 
     if ($filmId <= 0) {
-        header('Location: ' . $redirectUrl . '?promote_error=' . rawurlencode('Film invalide.'));
+        header('Location: ' . $redirectUrl . '&promote_error=' . rawurlencode('Film invalide.'));
         exit;
     }
 
     if (!$repo->promoteToCollection($filmId, $supportKey)) {
-        header('Location: ' . $redirectUrl . '?promote_error=' . rawurlencode('Impossible d’ajouter ce film à vos films.'));
+        header('Location: ' . $redirectUrl . '&promote_error=' . rawurlencode('Impossible d’ajouter ce film à vos films.'));
         exit;
     }
 
@@ -52,8 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$films = $repo->findAllWishlist($sortBy, $sortDir, $query);
-$totalCount = $repo->countWishlist();
+$isGroupScope = $scope === WishlistScope::GROUP;
+if ($isGroupScope) {
+    $films = $groupWishlist->findAggregated($foyerId, $userId, $sortBy, $sortDir, $query);
+    $totalCount = $groupWishlist->countDistinctOeuvres($foyerId);
+} else {
+    $films = $repo->findAllWishlist($sortBy, $sortDir, $query);
+    $totalCount = $repo->countWishlist();
+}
+
+$group = $canShowGroup ? (new \Moncine\FamilyGroupService())->findGroupForUser($userId) : null;
 
 View::render('souhaits', [
     'pageTitle' => LibraryStatut::label(LibraryStatut::WISHLIST),
@@ -63,4 +105,8 @@ View::render('souhaits', [
     'query' => $query,
     'searched' => $query !== '',
     'totalCount' => $totalCount,
+    'scope' => $scope,
+    'canShowGroup' => $canShowGroup,
+    'groupName' => (string) ($group['nom'] ?? ''),
+    'isGroupScope' => $isGroupScope,
 ]);
