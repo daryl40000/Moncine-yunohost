@@ -55,7 +55,7 @@ final class OeuvreRepository
         }
 
         $limit = max(1, min(30, $limit));
-        $pattern = '%' . $this->escapeLike($query) . '%';
+        $pattern = LikePattern::containsFragment($query);
         $stmt = $this->db->prepare(
             'SELECT * FROM oeuvres
              WHERE LOWER(titre) LIKE LOWER(?) ESCAPE \'\\\'
@@ -223,8 +223,4 @@ final class OeuvreRepository
         return $stmt->fetchAll() ?: [];
     }
 
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
-    }
 }

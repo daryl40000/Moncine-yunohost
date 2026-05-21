@@ -27,19 +27,6 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
     <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/responsive.css">
-    <?php if ($currentPath === '/catalogue.php'): ?>
-        <script>
-            (function () {
-                if (window.location.hash !== '#catalog-list-nav') {
-                    return;
-                }
-                if ('scrollRestoration' in history) {
-                    history.scrollRestoration = 'manual';
-                }
-                window.scrollTo(0, 0);
-            })();
-        </script>
-    <?php endif; ?>
 </head>
 <body<?= !empty($wideLayout) ? ' class="page-wide"' : '' ?>>
     <header class="site-header" id="site-header">

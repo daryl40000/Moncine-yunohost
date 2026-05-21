@@ -3,6 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    initCatalogListNavScrollReset();
     initMobileNav();
     initListAnchors();
 
@@ -39,6 +40,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /** Décalage sous l’en-tête fixe (aligné sur scroll-margin-top des barres de navigation). */
 const LIST_NAV_SCROLL_OFFSET_PX = 88;
+
+/**
+ * Catalogue : évite la restauration de scroll du navigateur avant l’ancre #catalog-list-nav.
+ */
+function initCatalogListNavScrollReset() {
+    if (window.location.hash !== '#catalog-list-nav') {
+        return;
+    }
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+}
 
 /**
  * Ancres #film-list-nav, #catalog-list-nav, #catalog-oeuvre-nav : cadrage sous l’en-tête.

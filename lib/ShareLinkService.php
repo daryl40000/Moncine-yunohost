@@ -13,6 +13,9 @@ final class ShareLinkService
 
     private const DEFAULT_EXPIRE_DAYS = 90;
 
+    /** Nombre maximal de liens actifs (non révoqués, non expirés) par utilisateur. */
+    public const MAX_ACTIVE_LINKS_PER_USER = 10;
+
     private ShareLinkRepository $links;
 
     public function __construct(?ShareLinkRepository $links = null)
@@ -40,6 +43,12 @@ final class ShareLinkService
         $scope = ShareLinkScope::normalize($scope);
         if ($scope === ShareLinkScope::COLLECTION && $foyerId <= 0) {
             return 'Aucun foyer associé pour partager la collection.';
+        }
+
+        $activeCount = $this->links->countActiveForUser($userId);
+        if ($activeCount >= self::MAX_ACTIVE_LINKS_PER_USER) {
+            return 'Limite atteinte : maximum ' . self::MAX_ACTIVE_LINKS_PER_USER
+                . ' liens actifs. Révoquez un lien existant avant d’en créer un nouveau.';
         }
 
         $rawToken = self::generateToken();

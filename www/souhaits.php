@@ -15,6 +15,7 @@ use Moncine\SupportPhysique;
 use Moncine\UserContext;
 use Moncine\View;
 use Moncine\WishlistScope;
+use Moncine\WishlistTargetRepository;
 
 if (!(new FilmRepository())->usesCatalogModel()) {
     header('Location: /films.php');
@@ -97,6 +98,12 @@ if ($isGroupScope) {
 
 $group = $canShowGroup ? (new \Moncine\FamilyGroupService())->findGroupForUser($userId) : null;
 
+$wishlistTargetsByFilmId = [];
+if (!$isGroupScope && WishlistTargetRepository::tableExists() && $films !== []) {
+    $ids = array_map(static fn (array $f): int => (int) ($f['id'] ?? 0), $films);
+    $wishlistTargetsByFilmId = (new WishlistTargetRepository())->mapByBibliothequeIds($ids);
+}
+
 View::render('souhaits', [
     'pageTitle' => LibraryStatut::label(LibraryStatut::WISHLIST),
     'films' => $films,
@@ -109,4 +116,5 @@ View::render('souhaits', [
     'canShowGroup' => $canShowGroup,
     'groupName' => (string) ($group['nom'] ?? ''),
     'isGroupScope' => $isGroupScope,
+    'wishlistTargetsByFilmId' => $wishlistTargetsByFilmId,
 ]);

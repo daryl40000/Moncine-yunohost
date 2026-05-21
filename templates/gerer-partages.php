@@ -46,7 +46,11 @@
 
             <button type="submit" class="btn btn-primary">Créer un lien</button>
         </form>
-        <p class="hint">Chaque lien expire au bout de 90 jours. L’URL complète n’est affichée qu’une fois à la création.</p>
+        <p class="hint">
+            Chaque lien expire au bout de 90 jours. Maximum
+            <?= (int) Moncine\ShareLinkService::MAX_ACTIVE_LINKS_PER_USER ?> liens actifs par compte.
+            L’URL complète n’est affichée qu’une fois à la création.
+        </p>
     </section>
 
     <section class="share-manage__list">

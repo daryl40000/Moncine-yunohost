@@ -90,7 +90,7 @@ final class FilmRepositoryLegacy
             return '';
         }
 
-        $pattern = '%' . self::escapeLikePattern($searchQuery) . '%';
+        $pattern = LikePattern::containsFragment($searchQuery);
         $params['collection_q'] = $pattern;
 
         $fields = [
@@ -110,11 +110,6 @@ final class FilmRepositoryLegacy
         }
 
         return '(' . implode(' OR ', $parts) . ')';
-    }
-
-    private static function escapeLikePattern(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     /** Films + dernière vision et note (pour export). */
@@ -975,7 +970,10 @@ final class FilmRepositoryLegacy
         }
 
         $personId = preg_match('/^\d+$/', $query) ? (int) $query : 0;
-        $like = '%' . $this->escapeLike($query) . '%';
+        $like = LikePattern::containsFragment($query);
+        if ($like === '') {
+            return [];
+        }
 
         // PDO SQLite : un même nom de paramètre (:x) ne doit pas être répété,
         // sinon la liaison échoue et « = 0 » matche presque toute la collection.
@@ -1087,11 +1085,6 @@ final class FilmRepositoryLegacy
             return false;
         }
         return mb_strpos(mb_strtolower($name, 'UTF-8'), $queryLower, 0, 'UTF-8') !== false;
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 
     public static function formatAnnee(int $annee): string

@@ -177,6 +177,9 @@ final class BibliothequeRepository
             $data['support_physique'] = SupportPhysique::normalize($supportKey);
         }
         $this->update($id, $data);
+        if (WishlistTargetRepository::tableExists()) {
+            (new WishlistTargetRepository())->deleteAllForBibliotheque($id);
+        }
 
         return true;
     }

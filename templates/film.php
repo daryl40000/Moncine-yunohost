@@ -68,6 +68,12 @@
         </div>
         <?php if ($isWishlist): ?>
             <p class="hint film-wishlist-badge">Ce film est dans vos envies (pas encore dans vos films).</p>
+            <?php if (Moncine\WishlistTargetRepository::tableExists()): ?>
+                <?php
+                $filmId = $filmId ?? (int) ($film['id'] ?? 0);
+                require MONCINE_ROOT . '/templates/_wishlist_targets_panel.php';
+                ?>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null); ?>

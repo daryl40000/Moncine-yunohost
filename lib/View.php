@@ -82,6 +82,26 @@ final class View
         return trim($ean);
     }
 
+    /**
+     * Résumé court des versions recherchées (liste Mes envies).
+     *
+     * @param list<array<string, mixed>> $targets
+     */
+    public static function formatWishlistTargetsSummary(array $targets): string
+    {
+        $parts = [];
+        foreach ($targets as $row) {
+            $support = SupportPhysique::label((string) ($row['support_physique'] ?? ''));
+            if ($support === '') {
+                continue;
+            }
+            $ean = trim((string) ($row['ean'] ?? ''));
+            $parts[] = $ean !== '' ? $support . ' · ' . self::formatEan($ean) : $support;
+        }
+
+        return implode(' ; ', $parts);
+    }
+
     /** URL d’affiche pour src : chemin local /posters/… ou HTTPS distant (échappée). */
     public static function posterSrc(?string $url): string
     {

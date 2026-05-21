@@ -13,6 +13,7 @@ use Moncine\HistoriqueRepository;
 use Moncine\LibraryStatut;
 use Moncine\OeuvreEanRepository;
 use Moncine\TmdbConfig;
+use Moncine\WishlistTargetRepository;
 use Moncine\UserContext;
 use Moncine\View;
 
@@ -66,8 +67,12 @@ $filmListContext = FilmListContext::fromQuery($_GET, $defaultList);
 $filmNav = $repo->getFilmNavigation($id, $filmListContext);
 
 $catalogEanSuggestion = null;
+$wishlistTargets = [];
+$catalogEansForOeuvre = [];
+$oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
+$isWishlistFilm = ($film['statut'] ?? '') === LibraryStatut::WISHLIST;
+
 if (OeuvreEanRepository::tableExists()) {
-    $oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
     if ($oeuvreId > 0) {
         $eanRow = (new OeuvreEanRepository())->findForOeuvreAndSupport(
             $oeuvreId,
@@ -76,7 +81,14 @@ if (OeuvreEanRepository::tableExists()) {
         if ($eanRow !== null) {
             $catalogEanSuggestion = (string) ($eanRow['ean'] ?? '');
         }
+        if ($isWishlistFilm) {
+            $catalogEansForOeuvre = (new OeuvreEanRepository())->listForOeuvre($oeuvreId);
+        }
     }
+}
+
+if ($isWishlistFilm && WishlistTargetRepository::tableExists()) {
+    $wishlistTargets = (new WishlistTargetRepository())->listForBibliothequeId($id);
 }
 
 View::render('film', [
@@ -105,4 +117,6 @@ View::render('film', [
     'filmNav' => $filmNav,
     'listBackUrl' => $filmListContext->backUrl(),
     'catalogEanSuggestion' => $catalogEanSuggestion,
+    'wishlistTargets' => $wishlistTargets,
+    'catalogEansForOeuvre' => $catalogEansForOeuvre,
 ]);

@@ -9,8 +9,10 @@
 /** @var bool $canShowGroup */
 /** @var string $groupName */
 /** @var bool $isGroupScope */
+/** @var array<int, list<array<string, mixed>>> $wishlistTargetsByFilmId */
 
 $query = $query ?? '';
+$wishlistTargetsByFilmId = $wishlistTargetsByFilmId ?? [];
 $scope = $scope ?? Moncine\WishlistScope::MINE;
 $isGroupScope = $isGroupScope ?? false;
 $canShowGroup = $canShowGroup ?? false;
@@ -203,12 +205,14 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                     <th>Nationalité</th>
                     <?php $sortHeader('Réalisateur', 'realisateur'); ?>
                     <?php $sortHeader('Style', 'styles'); ?>
+                    <th>Versions recherchées</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($films as $film):
                     $filmId = (int) $film['id'];
+                    $targets = $wishlistTargetsByFilmId[$filmId] ?? [];
                     ?>
                     <tr>
                         <td>
@@ -222,6 +226,13 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                         ) ?></td>
                         <td><?= Moncine\View::escape($film['realisateur']) ?></td>
                         <td><?= Moncine\View::escape($film['styles']) ?></td>
+                        <td class="wishlist-targets-summary">
+                            <?php if ($targets !== []): ?>
+                                <?= Moncine\View::escape(Moncine\View::formatWishlistTargetsSummary($targets)) ?>
+                            <?php else: ?>
+                                <span class="hint">—</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="wishlist-actions">
                             <form method="post" action="/souhaits.php" class="wishlist-promote-form import-form">
                                 <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>

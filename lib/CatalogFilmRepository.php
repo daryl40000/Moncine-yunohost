@@ -1166,7 +1166,10 @@ final class CatalogFilmRepository
         }
 
         $personId = preg_match('/^\d+$/', $query) ? (int) $query : 0;
-        $like = '%' . $this->escapeLike($query) . '%';
+        $like = LikePattern::containsFragment($query);
+        if ($like === '') {
+            return [];
+        }
 
         $nameMatch = 'LOWER(o.realisateur) LIKE LOWER(:like1)
                 OR LOWER(o.acteur_1) LIKE LOWER(:like2)
@@ -1557,7 +1560,7 @@ final class CatalogFilmRepository
             return '';
         }
 
-        $pattern = '%' . self::escapeLikePattern($searchQuery) . '%';
+        $pattern = LikePattern::containsFragment($searchQuery);
         $params['collection_q'] = $pattern;
 
         $fields = [
@@ -1577,11 +1580,6 @@ final class CatalogFilmRepository
         }
 
         return '(' . implode(' OR ', $parts) . ')';
-    }
-
-    private static function escapeLikePattern(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     private function usesFoyerRatings(): bool
@@ -1819,11 +1817,6 @@ final class CatalogFilmRepository
         }
 
         return $incoming > 0 ? $incoming : $current;
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 
     /**

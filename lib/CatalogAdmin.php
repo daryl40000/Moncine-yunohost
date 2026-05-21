@@ -465,18 +465,13 @@ final class CatalogAdmin
             return ['', []];
         }
 
-        $pattern = '%' . $this->escapeLike($search) . '%';
+        $pattern = LikePattern::containsFragment($search);
 
         return [
             ' WHERE LOWER(o.titre) LIKE LOWER(?) ESCAPE \'\\\'
                 OR LOWER(o.realisateur) LIKE LOWER(?) ESCAPE \'\\\'',
             [$pattern, $pattern],
         ];
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     private function cachePosterIfRemote(int $oeuvreId, string $posterUrl): void

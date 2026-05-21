@@ -57,6 +57,21 @@ final class ShareLinkRepository
         return $row !== false ? $row : null;
     }
 
+    public function countActiveForUser(int $userId): int
+    {
+        if ($userId <= 0 || !self::tableExists()) {
+            return 0;
+        }
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM share_links
+             WHERE user_id = ? AND revoked_at IS NULL
+               AND (expires_at IS NULL OR expires_at >= datetime('now'))"
+        );
+        $stmt->execute([$userId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     /** @return list<array<string, mixed>> */
     public function listForUser(int $userId): array
     {
