@@ -62,6 +62,99 @@ final class FriendshipRepository
         return $row !== null && (string) ($row['status'] ?? '') === self::STATUS_ACCEPTED;
     }
 
+    /** Blocage actif entre deux comptes (dans un sens ou l’autre). */
+    public function isBlockedBetween(int $userIdA, int $userIdB): bool
+    {
+        $row = $this->findBetween($userIdA, $userIdB);
+
+        return $row !== null && (string) ($row['status'] ?? '') === self::STATUS_BLOCKED;
+    }
+
+    /**
+     * @return true|string
+     */
+    public function blockUser(int $blockerId, int $blockedId): bool|string
+    {
+        if (!self::isAvailable()) {
+            return 'Les demandes d’ami ne sont pas disponibles.';
+        }
+        if ($blockerId <= 0 || $blockedId <= 0) {
+            return 'Compte invalide.';
+        }
+        if ($blockerId === $blockedId) {
+            return 'Action impossible.';
+        }
+
+        $blocked = (new UtilisateurRepository())->findById($blockedId);
+        if ($blocked === null || (int) ($blocked['actif'] ?? 0) !== 1) {
+            return 'Utilisateur introuvable.';
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare(
+                'DELETE FROM friendships
+                 WHERE (requester_id = ? AND addressee_id = ?)
+                    OR (requester_id = ? AND addressee_id = ?)'
+            )->execute([$blockerId, $blockedId, $blockedId, $blockerId]);
+
+            $this->db->prepare(
+                'INSERT INTO friendships (requester_id, addressee_id, status, created_at, responded_at)
+                 VALUES (?, ?, ?, datetime(\'now\'), datetime(\'now\'))'
+            )->execute([$blockerId, $blockedId, self::STATUS_BLOCKED]);
+
+            $this->db->commit();
+
+            return true;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * @return true|string
+     */
+    public function unblockUser(int $blockerId, int $blockedId): bool|string
+    {
+        if (!self::isAvailable()) {
+            return 'Les demandes d’ami ne sont pas disponibles.';
+        }
+        if ($blockerId <= 0 || $blockedId <= 0) {
+            return 'Compte invalide.';
+        }
+
+        $stmt = $this->db->prepare(
+            'DELETE FROM friendships
+             WHERE requester_id = ? AND addressee_id = ? AND status = ?'
+        );
+        $stmt->execute([$blockerId, $blockedId, self::STATUS_BLOCKED]);
+
+        return $stmt->rowCount() > 0
+            ? true
+            : 'Aucun blocage à lever pour cet utilisateur.';
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function listBlockedUsers(int $blockerId): array
+    {
+        if ($blockerId <= 0) {
+            return [];
+        }
+        $stmt = $this->db->prepare(
+            'SELECT u.id, u.nom, u.prenom, u.pseudo, u.ville, f.id AS friendship_id
+             FROM friendships f
+             INNER JOIN utilisateurs u ON u.id = f.addressee_id
+             WHERE f.requester_id = ? AND f.status = ? AND u.actif = 1
+             ORDER BY u.pseudo COLLATE FRENCH_NOCASE, u.nom COLLATE FRENCH_NOCASE'
+        );
+        $stmt->execute([$blockerId, self::STATUS_BLOCKED]);
+
+        return $stmt->fetchAll();
+    }
+
     /**
      * @return true|int|string ID de la demande ou message d’erreur
      */
@@ -75,6 +168,14 @@ final class FriendshipRepository
         }
         if ($requesterId === $addresseeId) {
             return 'Vous ne pouvez pas vous ajouter vous-même.';
+        }
+
+        if (!SocialRateLimit::allowFriendRequest($requesterId)) {
+            return SocialRateLimit::friendRequestLimitMessage($requesterId);
+        }
+
+        if ($this->isBlockedBetween($requesterId, $addresseeId)) {
+            return 'Impossible d’envoyer une demande à cet utilisateur.';
         }
 
         $addressee = (new UtilisateurRepository())->findById($addresseeId);
@@ -113,6 +214,8 @@ final class FriendshipRepository
              VALUES (?, ?, ?, datetime(\'now\'))'
         )->execute([$requesterId, $addresseeId, self::STATUS_PENDING]);
 
+        SocialRateLimit::recordFriendRequest($requesterId);
+
         return (int) $this->db->lastInsertId();
     }
 
@@ -128,6 +231,11 @@ final class FriendshipRepository
         }
         if ((string) ($row['status'] ?? '') !== self::STATUS_PENDING) {
             return 'Cette demande n’est plus en attente.';
+        }
+
+        $requesterId = (int) ($row['requester_id'] ?? 0);
+        if ($requesterId > 0 && $this->isBlockedBetween($actingUserId, $requesterId)) {
+            return 'Impossible d’accepter cette demande.';
         }
 
         $this->db->prepare(
@@ -255,7 +363,7 @@ final class FriendshipRepository
             return 'friends';
         }
         if ($status === self::STATUS_BLOCKED) {
-            return 'blocked';
+            return (int) ($row['requester_id'] ?? 0) === $viewerId ? 'blocked_by_me' : 'blocked_me';
         }
         if ($status === self::STATUS_PENDING) {
             return (int) ($row['requester_id'] ?? 0) === $viewerId ? 'pending_sent' : 'pending_received';

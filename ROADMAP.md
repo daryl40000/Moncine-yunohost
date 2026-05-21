@@ -1,586 +1,884 @@
 # Roadmap Moncine
 
-Document de planification pour anticiper les prochaines évolutions, **y compris la publication en paquet YunoHost** avec mises à jour versionnées et **migrations SQL** sur les instances du paquet.
+Document de planification des **évolutions fonctionnelles** de l’application Moncine (dvdthèque personnelle : films, bandes dessinées, puis magazines).
 
-Les phases métier restent **ordonnées par dépendances** ; chaque version de paquet doit livrer une migration testée depuis la **version précédente du paquet**.
-
----
-
-## Décision de déploiement : production actuelle figée
-
-**Ce qui tourne aujourd’hui en production (My Webapp manuel) ne sera plus modifié ni mis à jour.**
-
-| Environnement | Stratégie |
-|---------------|-----------|
-| **Production actuelle** | Gelée — correctifs urgents seulement si indispensable ; pas de nouvelles features |
-| **Développement** | Uniquement vers le **paquet YunoHost** et le schéma cible |
-| **Passage des données** | À la fin : **export** depuis l’ancienne instance → **import** dans la nouvelle (pas de migration SQL directe depuis l’ancienne `moncine.db`) |
-
-Conséquences pour la roadmap :
-
-- **Pas d’obligation** de migrer en place une base SQLite 015 → schéma multi-comptes sur le serveur actuel
-- Les fichiers `sql/migrations/002–015` restent l’**historique** du dépôt dev ; le paquet partira d’un **`schema.sql` à jour** + migrations **nouvelles** (001+ du paquet ou 016+ renommées proprement)
-- Il faudra prévoir un **export / import fiable** (CSV étendu ou outil dédié) couvrant films, envies, historique, métadonnées catalogue — à livrer avant la bascule
-- Les upgrades YunoHost (`N → N+1`) concernent **uniquement** les instances installées via le paquet, pas l’ancienne prod
+Les phases sont **ordonnées par dépendances** : chaque étape s’appuie sur la précédente. Les changements de base de données passent par des **migrations SQL numérotées**, testées depuis la version précédente.
 
 ---
 
-## Organisation du code : nouveau dossier (recommandé)
-
-Travailler la version paquet dans un **dossier séparé** est une bonne idée, alignée avec la prod figée et l’export/import.
-
-### Pourquoi séparer ?
-
-| Avantage | Explication |
-|----------|-------------|
-| **Zéro risque** | Aucun changement accidentel sur ce qui tourne en My Webapp aujourd’hui |
-| **Schéma neuf** | On peut repartir de `schema.sql` propre sans traîner 15 migrations historiques dans le chemin d’install |
-| **Clarté** | Deux mondes : `legacy` = référence + export ; `app` = paquet YunoHost |
-| **Paquet YunoHost** | Le dossier du paquet a une forme précise (`yunohost/`, `sources/`) — plus simple dans un arbre dédié |
-
-### Structure recommandée (même dépôt git ou dépôt voisin)
-
-**Option A — Monorepo (recommandée)** : un seul git, deux racines :
-
-```text
-Moncine/                    # dépôt git
-├── legacy/                 # copie figée de la prod actuelle (plus de features)
-│   ├── www/
-│   ├── lib/
-│   ├── sql/
-│   └── README.md           # « lecture seule / export uniquement »
-│
-└── moncine-app/            # nouveau développement = sources du paquet
-    ├── www/
-    ├── lib/
-    ├── sql/
-    │   ├── schema.sql      # schéma cible complet
-    │   └── migrations/     # 001, 002… uniquement paquet
-    ├── yunohost/
-    │   ├── manifest.toml
-    │   └── scripts/
-    └── doc/
-        └── migration-export-import.md
-```
-
-**Option B — Deux dépôts** : `Moncine-legacy` (archivé) + `Moncine` (nouveau). Plus net si vous ne voulez plus jamais mélanger l’historique git.
-
-### Ce qu’on fait concrètement
-
-1. **Renommer / déplacer** l’existant vers `legacy/` (ou laisser la racine actuelle = legacy et créer `moncine-app/` à côté — selon votre habitude).
-2. **Créer `moncine-app/`** en copiant seulement ce qui sert de base (pas `data/moncine.db`).
-3. **Nettoyer** dans le nouveau dossier : pas de `UserContext` id 1, migrations reparties de zéro, `yunohost/` dès le début.
-4. **Porter** les features utiles depuis `legacy/` par copie ciblée (écrans, TMDB…), pas par symlink automatique — pour éviter de réimporter les dettes.
-5. L’**export** reste sur `legacy/` jusqu’à la bascule ; l’**import** est développé et testé dans `moncine-app/`.
-
-### Ce qu’il ne faut pas faire
-
-- Modifier `legacy/` pour les nouvelles features (sauf bug critique sur l’export).
-- Partager `lib/` entre les deux dossiers via includes mélangés (confusion garantie).
-- Copier `data/` ou la base SQLite dans le nouveau dossier versionné.
-
-### Lien avec Cursor / l’IDE
-
-Ouvrir le workspace sur **`moncine-app/`** (ou le dépôt parent avec les deux dossiers) pour que l’assistant et les outils ciblent le bon code.
-
----
-
-## Principe directeur : penser « paquet YunoHost » dès maintenant
-
-Aujourd’hui, Moncine est déployé à la main dans **My Webapp** (`www/` + `lib/` + `data/`). La cible est une **application YunoHost officielle** (ou communautaire) où :
-
-- **`sources/`** du paquet = code PHP, templates, SQL (jamais la base utilisateur)
-- **`data/`** sur le serveur = SQLite, clés API, affiches (hors git, sauvegardé à part)
-- Chaque **mise à jour de paquet** exécute les **migrations SQL** manquantes, puis adapte la config (nginx, PHP)
-
-Règles non négociables :
-
-| Règle | Raison |
-|-------|--------|
-| Ne jamais écraser `data/moncine.db` à l’upgrade | Données utilisateur |
-| Une migration = un fichier numéroté, idempotent si possible | Reproductibilité YNH |
-| Version du **schéma** distincte de la version **affichée** de l’app | Savoir quoi migrer |
-| Tester `N-1 → N` sur une base **paquet** (pas l’ancienne prod) | Upgrades YunoHost |
-| Chemins via `MONCINE_DATA_PATH` (déjà en place) | Multi-installations |
-| Bascule utilisateur = **export / import**, pas copie brute de `.db` | Schémas différents (comptes, foyers…) |
-
----
-
-## Vision cible (fonctionnelle)
+## Vision cible
 
 | Acteur | Capacités |
 |--------|-----------|
-| **Administrateur** | Gère le catalogue d’œuvres partagé (films, puis BD), valide les propositions, enrichit les fiches via TMDB |
-| **Utilisateur** | Gère sa bibliothèque : collection du foyer, **sa** wishlist, **ses** notes et visions |
-| **Sous-utilisateur « famille »** | Même collection physique que le foyer ; wishlist et historique **personnels** |
+| **Administrateur** | Gère le **catalogue** d’œuvres partagé, valide les propositions, enrichit les fiches via TMDB — **ne gère plus les foyers** (phase 6) |
+| **Utilisateur** | **Amis**, création de **groupes famille** avec d’autres amis, bibliothèque partagée du groupe, **sa** wishlist, **ses** notes et visions ; prêts |
+| **Membre d’un groupe « famille »** | Même collection physique que le groupe ; wishlist et historique **personnels** (comme aujourd’hui avec le foyer v0.7) |
 | **Tous** | Ne modifient pas les métadonnées catalogue — seulement les infos de **leur** exemplaire (`support`, format image/son, etc.) |
 
-Fonctionnalités métier :
+Fonctionnalités métier visées :
 
-1. Comptes **admin** / **utilisateur** (connexion, gestion admin, **changement** et **réinitialisation** de mot de passe — voir phase 1 bis)
-2. Foyers et sous-comptes **famille**
-3. Page **Mes BD** (collection + wishlist)
-4. **Soumissions** au catalogue (préremplissage → validation admin)
+1. Comptes **admin** / **utilisateur** (connexion, gestion des comptes, changement et réinitialisation de mot de passe)
+2. **Réseau d’amis** (demandes, acceptation) — **socle** du système social
+3. **Groupes « famille » / foyer** : créés **par les utilisateurs** (amis qui s’associent), avec bibliothèque partagée — **remplace** la gestion admin des foyers (phase 4)
+4. ~~**Partage visiteur**~~ — **livré v0.8.0** : lien URL en **lecture seule** vers **Mes films** et **Mes envies** (fiche film consultable, aucune modification)
+5. **Prêts** : savoir quoi a été prêté, à qui, quand, et le retour
+6. **Stockage de fichiers** volumineux (PDF magazines, etc.) : dossier partagé type YunoHost + option **stockage objet S3**
+7. **Export PDF** de la bibliothèque / des envies
+8. Page **Mes BD** (collection + wishlist)
+9. ~~**Soumissions** au catalogue~~ — **livré v0.7.4** (propositions, validation admin, notifications)
+10. ~~**EAN multiples par œuvre** (catalogue)~~ — **livré v0.8.0** : un code-barres par édition / support (DVD, Blu-ray, 4K…) — socle pour **recherche d’achat** ultérieure
+11. **Collections de magazines** (titres, numéros, organisation par collection)
+12. **Magazines en PDF** + **lecteur PDF** (s’appuie sur la couche stockage)
 
 ---
 
-## État actuel (legacy — production figée)
+## État actuel
 
-Référence pour l’**export** au moment de la bascule, pas pour des upgrades SQL en prod :
+**Version applicative : 0.8.0**
 
-- Schéma **catalogue + bibliothèque** (`oeuvres`, `bibliotheque`, `historique`)
-- Migrations historiques **`002` → `015`** (dépôt dev uniquement)
-- **Mes films** / **Mes envies**, import CSV, TMDB, statistiques, catalogue admin
-- Mono-utilisateur (`UserContext` = id `1`)
-- Déploiement **My Webapp** manuel (`README.md`)
+Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 
-**Le code neuf** ne part pas de cette base : il définit un schéma cible propre dans le paquet.
+### Déjà en place
 
-**Dettes résolues par le nouveau schéma (pas par migration depuis prod) :**
+| Domaine | Contenu |
+|---------|---------|
+| **Catalogue & bibliothèque** | Tables `oeuvres`, `bibliotheque`, `historique` ; films, envies, import/export CSV |
+| **Enrichissement** | TMDB, OMDB, affiches, statistiques, quiz, sagas |
+| **Comptes (phase 1)** | Connexion, déconnexion, premier admin, CRUD utilisateurs, rôles, protection des pages |
+| **Mots de passe (phase 1 bis)** | Mon compte, changement de mot de passe, oublié par e-mail, reset admin |
+| **Exemplaire personnel (phase 2)** | `format_image` / `format_son` sur `bibliotheque` ; formulaire « mon exemplaire » ; enrichissement catalogue réservé admin |
+| **Admin catalogue (phase 3)** | Liste, fiche œuvre, maintenance, affiche manuelle |
+| **Foyers (phase 4)** | Collection partagée, envies / historique personnels |
+| **Profil (v0.7.2)** | Prénom, pseudo, menu Paramètres / Gestion, navigation fiches |
+| **Soumissions catalogue (phase 5, v0.7.4)** | Proposer, valider, refuser ; notifications in-app + e-mail |
+| **Profil & recherche (v0.7.6)** | Ville optionnelle, recherche par pseudo/ville, opt-out recherche, cloche compacte |
+| **Amis & groupes famille (phase 6, v0.7.7)** | Demandes d’ami, groupe famille utilisateur, invitations, admin foyers lecture seule |
+| **Envies groupe & UX (v0.7.8)** | Envies agrégées du groupe, votes « Moi aussi », ajout direct après proposition acceptée |
+| **UX & release (v0.7.9)** | Liens lisibles thème sombre, composant `.ui-pill`, `CHANGELOG.md`, tags `v0.7.x` |
+| **Sécurité sociale (v0.7.10)** | LIKE recherche, rate limit amis/recherche, blocage utilisateur |
+| **EAN catalogue (v0.8.0)** | Table `oeuvre_eans`, admin fiche œuvre, suggestion EAN exemplaire |
+| **Partage visiteur (v0.8.0)** | Liens lecture seule collection / envies, pages publiques sécurisées |
+| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023` |
+| **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
 
-- `format_image` / `format_son` sur `bibliotheque` dès le schéma cible (phase 2)
-- `historique.user_id` prévu avant livraison foyers (phase 4)
-- Runner de migrations **propre** pour le paquet uniquement (phase 0)
+### Point d’étape — mai 2026
+
+**Version actuelle : 0.8.0.** Phases 6 bis (EAN catalogue) et 7 (partage visiteur) livrées. **Prochaine évolution : phase 8** (prêts entre utilisateurs).
+
+| Version | Contenu principal |
+|---------|-------------------|
+| 0.7.0 | Foyers & collection partagée |
+| 0.7.1 | Affiche manuelle admin (catalogue) |
+| 0.7.2 | Profil, menus, navigation Préc./Suiv. entre fiches |
+| 0.7.4 | Soumissions catalogue + notifications + UX catalogue |
+| 0.7.6 | Ville, recherche utilisateurs, opt-out recherche, cloche notifications |
+| 0.7.7 | Amis, groupes famille, invitations, admin foyers lecture seule |
+| 0.7.8 | Envies du groupe, notifications proposition acceptée, ajout en un clic |
+| 0.7.9 | UX thème sombre, composant `.ui-pill`, CHANGELOG, tags Git alignés |
+| 0.7.10 | Sécurité sociale (LIKE, rate limit, blocage utilisateur) |
+| 0.8.0 | EAN multiples catalogue + partage visiteur (liens lecture seule) |
+
+### Prochaines étapes
+
+| Phase | Statut |
+|-------|--------|
+| Phase 3 — Admin catalogue | ✅ Livré (v0.6) |
+| Phase 4 — Foyers & famille | ✅ Livré (v0.7) |
+| Phase 5 — Soumissions catalogue | ✅ Livré (v0.7.4) |
+| Pré-phase 6 — Profil ville & recherche utilisateurs | ✅ Livré (v0.7.6) |
+| Phase 6 — Amis & groupes famille (foyers utilisateurs) | ✅ Livré (v0.7.7) |
+| Phase 6 bis — EAN multiples par œuvre (catalogue) | ✅ Livré (v0.8.0) |
+| Phase 7 — Partage visiteur (lien lecture seule) | ✅ Livré (v0.8.0) |
+| Phase 8 — Prêts entre utilisateurs | **Prochaine** |
+| Phase 9 — Stockage fichiers (local + S3) | À faire |
+| Phase 10 — Export PDF | À faire |
+| Phase 11 — Mes BD | À faire |
+| Phase 12 — Collections de magazines | À faire |
+| Phase 13 — Magazines PDF & lecteur | À faire |
+
+---
+
+## Vue d’ensemble des phases
+
+```mermaid
+flowchart TD
+    P1[Phase 1 - Comptes]
+    P1b[Phase 1 bis - Mots de passe]
+    P2[Phase 2 - Champs perso exemplaire]
+    P3[Phase 3 - Admin catalogue]
+    P4[Phase 4 - Foyers]
+    P5[Phase 5 - Soumissions]
+    P6[Phase 6 - Amis et groupes famille]
+    P6b[Phase 6 bis - EAN catalogue]
+    P7[Phase 7 - Partage visiteur]
+    P8[Phase 8 - Prets]
+    P9[Phase 9 - Stockage fichiers]
+    P10[Phase 10 - Export PDF]
+    P11[Phase 11 - Mes BD]
+    P12[Phase 12 - Magazines]
+    P13[Phase 13 - PDF magazines]
+
+    P1 --> P1b
+    P1 --> P2
+    P1 --> P3
+    P1b --> P2
+    P2 --> P4
+    P3 --> P5
+    P4 --> P6
+    P1 --> P6
+    P4 --> P7
+    P2 --> P7
+    P3 --> P6b
+    P6b --> P7
+    P6 --> P8
+    P4 --> P8
+    P9 --> P13
+    P2 --> P10
+    P4 --> P10
+    P7 --> P10
+    P5 --> P11
+    P2 --> P11
+    P4 --> P11
+    P11 --> P12
+    P12 --> P13
+```
 
 ---
 
 ## Stratégie SQL : migrations versionnées
 
-### Tables de suivi (à renforcer en phase 0)
+### Suivi du schéma
 
 ```sql
--- Déjà présent
 schema_migrations (name TEXT PRIMARY KEY, applied_at)
 
--- À ajouter (migration 016)
 app_metadata (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 )
--- Clés : schema_version, legacy_user_migrated, …
+-- Clés : schema_version, …
 ```
 
-- **`schema_version`** : entier = numéro de la dernière migration appliquée (ex. `15` aujourd’hui, puis `16`, `17`…)
-- Conserver **`schema_migrations`** pour traçabilité fichier par fichier
+- **`schema_version`** : numéro de la dernière migration appliquée
+- **`schema_migrations`** : traçabilité fichier par fichier
 
-### Convention pour les **nouvelles** migrations (à partir de 016)
+### Convention
 
 | Règle | Exemple |
 |-------|---------|
-| Nom de fichier | `016_app_metadata.sql`, `017_utilisateurs_auth.sql` |
-| Numéro sur 3 chiffres, croissant | Jamais modifier un fichier déjà publié dans un paquet |
+| Nom de fichier | `007_admin_audit_log.sql`, `008_foyers.sql` |
+| Numéro sur 3 chiffres, croissant | Ne jamais modifier un fichier déjà publié |
 | Une responsabilité par fichier | Auth ≠ foyers ≠ BD |
-| SQL + commentaire en tête | `-- requires: schema_version >= 15` |
-| Données : `INSERT…SELECT` explicite | Migration 013 = bon modèle |
-| Colonnes SQLite | `ALTER TABLE` + gestion `duplicate column` (déjà partiel) |
+| SQL + commentaire en tête | `-- requires: schema_version >= 6` |
+| Données : `INSERT…SELECT` explicite | Pour les transformations de données existantes |
 
-### Migrations « données » sur instances **paquet** uniquement
-
-| Événement | Stratégie |
-|-----------|-----------|
-| **Bascule depuis ancienne prod** | Export CSV (ou outil) → import sur paquet neuf — **pas** `cp moncine.db` |
-| Install fraîche paquet | `schema.sql` complet + éventuellement seed admin |
-| Upgrade paquet `N → N+1` | Fichiers SQL numérotés + `scripts/upgrade` |
-| Données complexes (foyers) | SQL sur instance paquet ; re-import si besoin depuis export intermédiaire |
-
-### Amélioration du runner (phase 0 — pour le paquet uniquement)
-
-| # | Tâche |
-|---|--------|
-| 0.4 | Classe `SchemaMigrator` (transaction par fichier, log, `schema_version`) |
-| 0.5 | Commande CLI `php lib/cli/migrate.php` (YunoHost + dev local) |
-| 0.6 | **`schema.sql` = schéma cible v1 paquet** ; migrations incrémentales à partir de `001` ou `016` **paquet** |
-| 0.7 | Tests : install vide → OK ; upgrade paquet `1.0 → 1.1 → 2.0` sur base paquet de test |
-| 0.8 | Les migrations **002–015** restent dans le dépôt pour historique dev ; **hors** chemin upgrade paquet |
-
-### Schéma cible simplifié (après toutes les phases)
+### Schéma cible (après toutes les phases)
 
 ```text
-oeuvres              -- catalogue partagé (films, BD, …)
+oeuvres              -- catalogue partagé (films, BD, magazines, …)
 bibliotheque         -- lien foyer/user + statut + champs perso exemplaire
 historique           -- visions + notes (+ user_id)
-utilisateurs         -- comptes (role, foyer_id)
-foyers               -- ménage / famille
+utilisateurs         -- comptes (role ; lien groupe via group_members)
+foyers               -- groupes « famille » (type famille), créés par les utilisateurs (phase 6)
+group_members        -- appartenance user ↔ groupe (rôle fondateur / membre)
+friendships          -- liens amis (prérequis pour créer ou rejoindre un groupe)
 catalogue_soumissions
+notifications          -- alertes in-app (soumissions catalogue, etc.)
+loans                -- prêts d’exemplaires (phase 7)
+stored_objects       -- métadonnées fichiers (chemin local ou clé S3) (phase 8)
+share_links          -- jetons URL partagée lecture seule (phase 9)
+magazine_collections -- titres / séries de magazines (phase 11)
+magazine_numeros     -- numéros rattachés à une collection (phase 11)
+magazine_fichiers    -- lien vers stored_objects (phase 12)
 schema_migrations
 app_metadata
 sessions             -- si sessions en base
 ```
 
----
+### Outils
 
-## Stratégie paquet YunoHost
-
-### Arborescence cible dans le dépôt
-
-```text
-Moncine/
-├── lib/                    # code applicatif
-├── www/
-├── sql/
-│   ├── schema.sql          # install fraîche uniquement
-│   └── migrations/
-├── yunohost/               # à créer (phase 0.9 ou 1.0 paquet)
-│   ├── manifest.toml
-│   ├── scripts/
-│   │   ├── install
-│   │   ├── upgrade
-│   │   ├── backup
-│   │   ├── restore
-│   │   └── remove
-│   └── conf/
-│       ├── nginx.conf
-│       └── php-fpm.conf    # MONCINE_DATA_PATH, etc.
-└── doc/
-    └── packaging.md        # procédure release (optionnel)
-```
-
-### Cycle de vie YunoHost
-
-```mermaid
-sequenceDiagram
-    participant Admin as Admin YunoHost
-    participant YNH as yunohost CLI
-    participant Script as scripts/upgrade
-    participant App as Moncine PHP
-
-    Admin->>YNH: yunohost app upgrade moncine
-    YNH->>Script: upgrade ancienne_version → nouvelle
-    Script->>App: php lib/cli/migrate.php
-    App->>App: applique SQL 016…0NN
-    Script->>Script: nginx + php-fpm reload
-    YNH-->>Admin: OK
-```
-
-### Contenu des scripts
-
-| Script | Rôle |
-|--------|------|
-| **install** | Créer `data/`, droits, admin initial (phase 1+), **ne pas** copier de `.db` |
-| **upgrade** | `migrate.php` **systématique**, puis tâches données si version franchit un seuil |
-| **backup** | Archive `data/` (db + posters + clés) |
-| **restore** | Restauration `data/` puis `migrate.php` (schéma peut avoir avancé) |
-| **remove** | Option conserver `data/` (déjà standard YNH) |
-
-### Variables d’environnement (PHP-FPM)
-
-Déjà partiellement prévu dans `lib/config.php` :
-
-```bash
-MONCINE_DATA_PATH=/var/www/moncine/data
-MONCINE_TMDB_API_KEY=…   # optionnel : config panel YNH
-```
-
-Le panneau de config du paquet (manifest `config.toml`) exposera au minimum :
-
-- Nom de l’instance / admin email (install)
-- Clé TMDB (optionnel)
-- (Plus tard) mode SSO YunoHost si choisi
-
-### Authentification et YunoHost
-
-| Option | Paquet | Recommandation |
-|--------|--------|----------------|
-| Session PHP + comptes Moncine | Compatible tous hébergements | **Phase 1** — défaut du paquet |
-| Changement de mot de passe (utilisateur connecté) | Page « Mon compte » | **Phase 1 bis** — paquet **2.0.1** |
-| Mot de passe oublié (e-mail + jeton) | SMTP YunoHost / `sendmail` | **Phase 1 bis** — paquet **2.0.1** |
-| SSO / LDAP YunoHost | `use_sso` dans manifest | Phase ultérieure (optionnelle) |
-| My Webapp password only | Aujourd’hui | Remplacé par login Moncine en 2.0 |
+| Élément | Rôle |
+|---------|------|
+| `sql/schema.sql` | Install fraîche (base vide) |
+| `sql/migrations/*.sql` | Évolutions incrémentales |
+| `php lib/cli/migrate.php` | Appliquer les migrations (dev et production) |
 
 ---
 
-## Calendrier : versions paquet ↔ phases ↔ migrations
-
-Chaque **version majeure de paquet** = une rupture de schéma ou de comportement testée. Les mineures = correctifs sans nouvelle migration.
-
-| Version paquet | Version schéma | Phase | Migrations (nouvelles) | Contenu principal |
-|--------------|----------------|-------|------------------------|-------------------|
-| **1.0.x** | 1 (paquet) | 0 | `schema.sql` install fraîche | 1er paquet YNH : même features que legacy, schéma propre |
-| **1.1.x** | 2 | 0 | `002_…` (paquet) | Runner migrations + export/import bascule documenté |
-| **2.0.0** | 3–5 | 1 | `003_utilisateurs_auth`, … | Connexion, admin, comptes (install ou import post-bascule) |
-| **2.0.1** | 5–6 | 1 bis | `004_password_reset_tokens.sql` (optionnel) | Changer son mot de passe ; réinitialisation oubliée |
-| **2.1.0** | 20–21 | 2 | `020_format_exemplaire_bibliotheque`, `021_drop_oeuvre_format` | Champs perso vs catalogue |
-| **2.2.x** | 21 | 3 | — ou `022_catalog_audit` | Outils admin catalogue |
-| **3.0.0** | 22–25 | 4 | `022_foyers`, `023_bibliotheque_foyer`, `024_historique_user`, `025_wishlist_user` | Famille, collection partagée |
-| **3.1.0** | 26 | 5 | `026_catalogue_soumissions` | Propositions utilisateurs |
-| **4.0.0** | 27–29 | 6 | `027_oeuvres_bd`, `028_…` | Mes BD |
-
-**Règle release :** les migrations SQL du paquet ne visent **pas** l’ancienne production My Webapp. La bascule passe par **export / import** une fois le paquet et l’outil d’import à jour.
-
-**Livrable bascule (à planifier, ex. paquet 1.1 ou 2.0) :**
-
-| # | Tâche export/import |
-|---|---------------------|
-| E.1 | Export complet depuis **legacy** : collection + envies + historique + champs œuvre |
-| E.2 | Import dans paquet : mapping vers nouveau schéma (compte admin, foyer par défaut si 3.0) |
-| E.3 | Guide utilisateur : « Migrer depuis Moncine My Webapp » (étapes, sauvegarde `data/`) |
-| E.4 | Test bout en bout : prod figée exportée → paquet neuf importé → même nombre de films |
-
----
-
-## Vue d’ensemble des phases (inchangée, enrichie)
-
-```mermaid
-flowchart TD
-    P0[Phase 0 - SQL + paquet YNH base]
-    P1[Phase 1 - Comptes]
-    P1b[Phase 1 bis - Mots de passe]
-    P2[Phase 2 - Champs perso]
-    P3[Phase 3 - Admin catalogue]
-    P4[Phase 4 - Foyers]
-    P5[Phase 5 - Soumissions]
-    P6[Phase 6 - Mes BD]
-
-    P0 --> P1
-    P1 --> P1b
-    P1b --> P2
-    P1 --> P2
-    P1 --> P3
-    P2 --> P4
-    P3 --> P5
-    P2 --> P6
-    P4 --> P6
-    P5 --> P6
-```
-
----
-
-## Phase 0 — Fondations SQL & paquet (prérequis YunoHost sérieux)
-
-**Objectif :** pouvoir publier des upgrades sans casser les instances existantes.
-
-| # | Tâche | Livrable paquet |
-|---|--------|-----------------|
-| 0.1 | Inventaire écrans `oeuvres` vs `bibliotheque` | Doc interne |
-| 0.2 | Checklist régression (import, envies, enrichissement) | `doc/tests-manuels.md` |
-| 0.3 | Lister dettes schéma (`historique.user_id`, etc.) | ROADMAP |
-| 0.4–0.8 | **SchemaMigrator** + CLI + `016_app_metadata` | **Paquet 1.1.0** |
-| 0.9 | Paquet YunoHost à la racine (`manifest.toml`, scripts, conf) | **Fait en dev** — voir `doc/packaging-yunohost.md` |
-| 0.10 | `sources/` = copie propre sans `data/moncine.db` | `.gitignore` renforcé |
-| 0.11 | Test upgrade paquet sur base créée par le paquet (pas ancienne prod) | Procédure release |
-| 0.12 | Spécifier format export/import de bascule (livrable E.*) | Avant bascule utilisateur |
-
-**Critère terminé :** install paquet + upgrade test OK ; export legacy → import paquet validé sur jeu de test.
-
----
-
-## Phase 1 — Comptes, connexion et rôles → **paquet 2.0.0**
+## Phase 1 — Comptes, connexion et rôles ✅
 
 **Objectif :** fin du mono-utilisateur ; base pour familles et soumissions.
 
-**Dépend de :** phase 0.
+**Statut : livré** (migration `002_utilisateurs_auth.sql`).
 
-### Migrations SQL prévues
-
-```text
-017_utilisateurs_auth.sql
-  - email, password_hash, role, actif, last_login_at
-  - foyer_id NULL (colonne vide jusqu’à phase 4)
-
-018_sessions.sql (si sessions en base)
-
-019_seed_admin.sql (install uniquement, pas migration depuis ancienne DB)
-```
-
-### Développement
-
-| # | Tâche | Paquet |
+| # | Tâche | Statut |
 |---|--------|--------|
-| 1.1 | Connexion / déconnexion | 2.0.0 |
-| 1.2 | `UserContext` ← session | 2.0.0 |
-| 1.3 | Protection pages + menu par rôle | 2.0.0 |
-| 1.4 | Assistant **premier admin** (install YNH + page setup si DB vide) | 2.0.0 |
-| 1.5 | CRUD utilisateurs (admin) | 2.0.0 |
-| 1.6 | `canManageCatalog()` ← `role` | 2.0.0 |
-| 1.7 | Durcissement sécurité (CSRF, limite connexion, hash, déconnexion POST) | 2.0.0 |
+| 1.1 | Connexion / déconnexion | ✅ |
+| 1.2 | `UserContext` ← session | ✅ |
+| 1.3 | Protection pages + menu par rôle | ✅ |
+| 1.4 | Assistant premier admin (DB vide) | ✅ |
+| 1.5 | CRUD utilisateurs (admin) | ✅ |
+| 1.6 | `canManageCatalog()` ← `role` | ✅ |
+| 1.7 | Durcissement sécurité (CSRF, limite connexion, hash) | ✅ |
 
-**Bascule depuis prod figée :** export legacy → import sur paquet 2.0 (compte admin créé à l’import ou au setup).
-
-**Critère terminé :** deux comptes → deux bibliothèques distinctes ; import de test depuis export legacy OK.
-
-**Déjà livré en dev (hors numérotation paquet) :** 1.1–1.7 partiellement (connexion, premier compte, admin comptes, suppression compte, durcissement session).
+**Critère :** deux comptes → deux bibliothèques distinctes.
 
 ---
 
-## Phase 1 bis — Mots de passe (compte personnel) → **paquet 2.0.1**
+## Phase 1 bis — Mots de passe ✅
 
-**Objectif :** chaque utilisateur gère son mot de passe sans passer par l’admin ; récupération en cas d’oubli.
+**Objectif :** chaque utilisateur gère son mot de passe ; récupération en cas d’oubli.
 
-**Dépend de :** phase 1 (2.0.0). **Peut être développée en parallèle de la phase 2** si les ressources le permettent, mais **release avant ou avec 2.1.0** recommandée (sécurité / confort).
+**Statut : livré** (migration `004_password_reset_tokens.sql`).
 
-### Migrations SQL prévues
+| # | Tâche | Statut |
+|---|--------|--------|
+| 1 bis.1 | Page Mon compte (profil) | ✅ |
+| 1 bis.2 | Changer son mot de passe | ✅ |
+| 1 bis.3 | Admin : réinitialiser le mot de passe d’un compte | ✅ |
+| 1 bis.4 | Mot de passe oublié (formulaire e-mail) | ✅ |
+| 1 bis.5 | Nouveau mot de passe via jeton (expiration, usage unique) | ✅ |
+| 1 bis.6 | Envoi e-mail (SMTP ou `mail()`) | ✅ |
+| 1 bis.7 | Limite de débit sur « oublié » | ✅ |
 
-```text
-004_password_reset_tokens.sql (si stockage en base)
-  - password_reset_tokens (
-      user_id, token_hash, expires_at, created_at, used_at
-    )
-  - index sur token_hash, purge des jetons expirés à l’upgrade
-```
-
-Alternative sans table : jeton signé (HMAC + secret dans `data/`) avec expiration courte — à trancher en 1 bis.0 (doc technique).
-
-### Développement
-
-| # | Tâche | Paquet | Notes |
-|---|--------|--------|--------|
-| 1 bis.1 | Page **Mon compte** (profil : nom, e-mail affiché) | 2.0.1 | Lien menu utilisateur |
-| 1 bis.2 | **Changer son mot de passe** (ancien + nouveau + confirmation) | 2.0.1 | CSRF ; invalider autres sessions si sessions en base (phase ultérieure) |
-| 1 bis.3 | Admin : **réinitialiser** le mot de passe d’un compte (mot de passe provisoire affiché une fois) | 2.0.1 | Complète le « mot de passe provisoire » à la création |
-| 1 bis.4 | **Mot de passe oublié** : formulaire e-mail → envoi lien | 2.0.1 | Message générique si e-mail inconnu (pas d’énumération) |
-| 1 bis.5 | Page **Nouveau mot de passe** via jeton (expiration 1 h, usage unique) | 2.0.1 | Même règles 8–128 caractères que phase 1 |
-| 1 bis.6 | Envoi e-mail via **SMTP YunoHost** ou `mail()` documenté | 2.0.1 | Tester sur instance YNH réelle |
-| 1 bis.7 | Limite de débit sur « oublié » (comme `LoginThrottle`) | 2.0.1 | Par e-mail + IP |
-| 1 bis.8 | Doc admin : configurer l’envoi mail sur le serveur | 2.0.1 | `doc/comptes-mot-de-passe.md` |
-
-### Hors scope 2.0.1 (plus tard)
+### Hors scope court terme
 
 | Idée | Phase suggérée |
 |------|----------------|
-| Forcer changement au premier login (compte créé par admin) | 2.0.2 ou 1 bis.9 |
-| Authentification à deux facteurs (2FA) | Hors périmètre court terme |
-| Réinitialisation sans e-mail (code admin sur instance) | Option YNH si pas de SMTP |
-
-**Critère terminé :** un utilisateur change son mot de passe ; un autre utilise « mot de passe oublié » et reçoit un lien valide ; jeton expiré ou réutilisé refusé.
+| Forcer changement au premier login | 1 bis.9 |
+| Authentification à deux facteurs (2FA) | Hors périmètre |
+| SSO / LDAP | Phase ultérieure (optionnelle) |
 
 ---
 
-## Phase 2 — Catalogue vs exemplaire personnel → **paquet 2.1.0**
+## Phase 2 — Catalogue vs exemplaire personnel ✅
 
-**Dépend de :** phase 1.
+**Objectif :** séparer les métadonnées catalogue (partagées) des infos de l’exemplaire personnel (support, formats).
 
-### Migrations SQL prévues
+**Statut : livré** (migrations `005_format_exemplaire_bibliotheque.sql`, `006_drop_oeuvre_format_columns.sql`).
+
+| # | Tâche | Statut |
+|---|--------|--------|
+| 2.1 | `format_image`, `format_son` sur `bibliotheque` | ✅ |
+| 2.2 | Formulaires utilisateur : champs exemplaire uniquement | ✅ |
+| 2.3 | Blocage serveur : pas de modification catalogue par un user | ✅ |
+| 2.4 | Enrichissement TMDB réservé admin | ✅ |
+| 2.5 | Migration des données existantes | ✅ |
+
+**Critère :** l’utilisateur modifie support/format ; pas le titre catalogue.
+
+---
+
+## Phase 3 — Admin catalogue ✅
+
+**Objectif :** outils de maintenance du catalogue pour les administrateurs.
+
+**Statut : livré** (v0.6.0, migration `007_admin_audit_log.sql`).
+
+| # | Tâche | Statut |
+|---|--------|--------|
+| 3.1 | Page admin : vue d’ensemble (doublons, fiches incomplètes) | ✅ |
+| 3.2 | Fusion de doublons (`oeuvres` → une seule fiche) | ✅ |
+| 3.3 | Journal des actions admin sur le catalogue | ✅ |
+| 3.4 | Outils de nettoyage (affiches orphelines, doublons TMDB) | ✅ |
+
+Page : `/maintenance-catalogue.php` (menu admin **Maintenance**).
+
+**Critère :** un admin peut détecter et fusionner un doublon sans perte de bibliothèque utilisateur.
+
+---
+
+## Phase 4 — Foyers & famille ✅
+
+**Objectif :** collection partagée au niveau du foyer ; wishlist et historique personnels.
+
+**Statut : livré** (v0.7.0, migrations `008`–`011`, script `FoyerMigration`).
+
+**Dépend de :** phase 2. **Migration la plus délicate** — prévoir sauvegarde avant upgrade.
+
+### Migrations SQL
 
 ```text
-020_format_exemplaire.sql
-  - ADD format_image, format_son ON bibliotheque
-  - UPDATE … FROM oeuvres (via oeuvre_id)
+008_foyers.sql — table foyers, foyer_id sur utilisateurs
+009_bibliotheque_foyer_collection.sql — foyer_id sur collection
+010_historique_user_id.sql — user_id sur historique
+011_wishlist_per_user.sql — contraintes collection (foyer) / envies (user)
+```
 
-021_cleanup_oeuvre_format.sql
-  - (Option) conserver copies sur oeuvres pour admin ou les supprimer
+Script PHP post-SQL : `lib/FoyerMigration.php`.
+
+| # | Tâche | Statut |
+|---|--------|--------|
+| 4.1 | CRUD foyers (admin) | ✅ |
+| 4.2 | Affectation utilisateur → foyer | ✅ |
+| 4.3 | Collection visible par tous les membres du foyer | ✅ |
+| 4.4 | Wishlist et historique filtrés par `user_id` | ✅ |
+| 4.5 | Interface « famille » (sous-comptes, affectation foyer) | ✅ |
+
+Pages : `/foyers.php`, `/utilisateurs.php`, `/mon-compte.php`.
+
+**Critère terminé :** deux membres d’un même foyer voient la même collection ; leurs envies et notes restent séparées.
+
+> **Évolution prévue (phase 6)** : le modèle ci-dessus reste **valide techniquement** (tables `foyers`, `foyer_id`, collection partagée), mais la **gouvernance** change. L’admin ne crée plus les foyers : des **amis** créent ensemble un **groupe famille** qui reprend les mêmes droits (bibliothèque commune, envies perso). Les foyers v0.7 seront **migrés** vers ce modèle ; `/foyers.php` admin sera retiré ou remplacé par une gestion côté utilisateur.
+
+---
+
+## Phase 5 — Soumissions catalogue ✅
+
+**Objectif :** les utilisateurs proposent de nouvelles œuvres ; l’admin valide avant insertion dans `oeuvres`.
+
+**Statut : livré** (v0.7.4, migration `013_catalogue_soumissions.sql`).
+
+**Dépend de :** phase 3 (recommandé) ou phase 1 (minimum).
+
+### Migrations SQL livrées
+
+```text
+012_utilisateur_profil.sql   -- prénom, pseudo (v0.7.2)
+013_catalogue_soumissions.sql
+014_notifications.sql
 ```
 
 | # | Tâche |
 |---|--------|
-| 2.1–2.5 | (inchangé) formulaires, blocage serveur, TMDB admin only |
+| 5.1 | Formulaire « proposer une œuvre » (TMDB optionnel, autocomplétion) | ✅ |
+| 5.2 | File d’attente admin (approuver / rejeter / modifier la fiche) | ✅ |
+| 5.3 | Notification admin (nouvelle proposition) et utilisateur (acceptée / refusée), in-app + e-mail | ✅ |
+| 5.4 | Aucune écriture directe dans `oeuvres` par un utilisateur non admin | ✅ |
+| 5.5 | Menus : Paramètres (Compte, Proposer, Importer) ; Gestion admin ; pas de « Proposer » pour l’admin | ✅ |
+| 5.6 | Navigation Préc./Suiv. (fiches film, fiches catalogue, pagination liste catalogue) | ✅ |
 
-**Critère terminé :** utilisateur modifie support/format ; pas le titre catalogue.
+Pages : `/proposer-oeuvre.php`, `/mes-soumissions.php`, `/soumissions-catalogue.php`, `/notifications.php`.
+
+**Critère terminé :** une proposition validée apparaît dans le catalogue ; une rejetée ne laisse aucune trace dans `oeuvres` ; les parties concernées sont notifiées.
+
+> **Après migration :** `php lib/cli/migrate.php` (applique `013` et `014` si besoin).
 
 ---
 
-## Phase 3 — Admin catalogue → **paquet 2.2.x**
+## Phase 6 — Amis & groupes « famille » (nouveau modèle de foyer)
 
-Outils admin, journal, fusion doublons. Migration optionnelle `022_admin_audit_log.sql`.
+**Objectif :** le **réseau d’amis** devient le socle social. Le **foyer** n’est plus un objet créé par l’**admin** : c’est un **groupe d’amis** de type **famille** (ou **foyer**), que **deux utilisateurs amis** (ou plus) **créent ensemble** et auquel ils invitent d’autres amis. Ce groupe conserve tout ce que fait le foyer actuel : **bibliothèque partagée**, envies et historique **personnels** par membre.
 
----
+**Dépend de :** phases 1 et 4 (comptes + modèle collection partagée déjà en place — à faire évoluer).
 
-## Phase 4 — Foyers & famille → **paquet 3.0.0** (rupture schéma majeure)
+### Principe (remplace la gestion admin des foyers)
 
-**Migration la plus délicate** — prévoir fenêtre de maintenance et **backup obligatoire** dans `scripts/upgrade`.
+| Avant (v0.7, phase 4) | Après (phase 6) |
+|------------------------|-----------------|
+| L’admin crée un foyer et affecte les utilisateurs | Deux **amis** créent ensemble un groupe **famille** |
+| `/foyers.php` réservé admin | **Mes groupes** / **Créer un groupe famille** côté utilisateur |
+| `utilisateurs.foyer_id` imposé par admin | Appartenance via **group_members** ; un user peut appartenir à un groupe (règle à préciser : un seul groupe famille actif ou plusieurs — v1 : **un groupe famille principal**) |
+| Amis et foyers séparés | **Amis d’abord** → puis groupe famille = ancien « foyer » |
+
+```mermaid
+flowchart LR
+    A[Utilisateur A] <-->|demande acceptée| B[Utilisateur B]
+    A --> G[Groupe famille]
+    B --> G
+    G --> C[Collection partagée bibliotheque]
+    A --> W1[Wishlist perso A]
+    B --> W2[Wishlist perso B]
+```
 
 ### Migrations SQL prévues
 
 ```text
-022_foyers.sql
-023_bibliotheque_foyer_collection.sql
-  - foyer_id sur entrées collection
-  - UNIQUE (foyer_id, oeuvre_id) pour statut collection
-
-024_historique_user_id.sql
-
-025_wishlist_per_user.sql
-  - Contrainte wishlist : UNIQUE (user_id, oeuvre_id)
+016_friendships_and_groups.sql
+  - friendships (requester_id, addressee_id, status pending|accepted|blocked, …)
+  - foyers : kind = 'famille' | …, created_by_user_id, created_at
+  - group_members (foyer_id, user_id, role founder|member, joined_at, invited_by)
+  - migration données : chaque foyer v0.7 → groupe famille + membres existants
+  - utilisateurs : foyer_id conservé comme groupe actif ou dérivé de group_members
 ```
 
-### Script PHP post-SQL
+> Le nom de table **`foyers`** peut être conservé en base pour limiter la casse (migrations 008–011), mais l’**interface** et les **droits** parlent de **groupe famille**.
 
-- Regrouper les entrées `bibliotheque` collection du même ménage sous un `foyer_id`
-- Dédupliquer si besoin
+### Tâches
 
-**Critère terminé :** upgrade 2.x → 3.0 sur base réelle de test ; wishlists séparées.
+| # | Tâche |
+|---|--------|
+| 6.1 | **Demandes d’ami** : envoyer / accepter / refuser (+ notifications) | ✅ |
+| 6.2 | Page **Mes amis** (liste, demandes en attente) | ✅ |
+| 6.3 | **Créer un groupe famille** (nom, un groupe actif par utilisateur) | ✅ |
+| 6.4 | **Inviter un ami** dans le groupe (invitation acceptée par l’invité) | ✅ |
+| 6.5 | **Quitter le groupe** / transfert du rôle fondateur (v1 minimal) | ✅ |
+| 6.6 | **Bibliothèque partagée** : `bibliotheque.foyer_id` du groupe | ✅ |
+| 6.7 | **Migration v0.7** : foyers → groupes + `group_members` | ✅ |
+| 6.8 | **Retrait admin** : `/foyers.php` lecture seule ; comptes sans affectation foyer | ✅ |
+| 6.9 | Visibilité profil / wishlist ami | — (phase ultérieure) |
+| 6.10 | Modération admin signalement / blocage | — (phase ultérieure) |
+
+**Critère terminé :** Alice et Bob sont amis ; ils créent ensemble le groupe « Famille Martin » ; leur collection DVD est commune ; leurs envies restent séparées ; l’admin ne crée plus de foyer depuis l’interface Gestion.
+
+### Ce qui ne change pas (héritage phase 4)
+
+- Collection = lignes `bibliotheque` liées au **groupe** (`foyer_id`).
+- Envies et historique = **par utilisateur** (`user_id`).
+- Sous-comptes « famille » sans e-mail propre : à redéfinir (compte enfant rattaché à un adulte du groupe — phase ultérieure ou règle v1 simplifiée).
+
+### Points d’attention (phase 6)
+
+- **Utilisateur sans groupe** : bibliothèque personnelle seule jusqu’à création ou invitation dans un groupe famille.
+- **Un ou plusieurs groupes** : v1 recommandé = **un groupe famille actif** par utilisateur pour éviter la confusion des collections.
+- **Compatibilité** : sauvegarde obligatoire avant migration ; script de reprise des foyers admin existants.
 
 ---
 
-## Phase 5 — Soumissions catalogue → **paquet 3.1.0**
+## Phase 6 bis — EAN multiples par œuvre (catalogue)
 
-`026_catalogue_soumissions.sql` + UI. Aucune écriture directe dans `oeuvres` avant validation admin.
+**Statut : livré** (v0.8.0, migration `023_oeuvre_eans.sql`).
+
+**Objectif :** sur une **fiche catalogue** (`oeuvres`), enregistrer **plusieurs codes EAN** pour le **même film** (ou la même œuvre), selon l’**édition physique** : par exemple un EAN pour le **DVD**, un autre pour le **Blu-ray**, un autre pour le **Blu-ray 4K**.
+
+Ces codes sont des **métadonnées catalogue** (partagées par tous les foyers), distinctes de l’EAN éventuel saisi sur **un exemplaire** dans `bibliotheque` (mon exemplaire personnel).
+
+**Usage futur :** alimenter une **recherche d’achat** (comparateurs de prix, marketplaces, alertes stock) — phase dédiée **hors périmètre v1** de cette étape ; la phase 6 bis pose uniquement le **modèle de données** et l’**interface de gestion**.
+
+**Dépend de :** phase 3 (catalogue admin) ; `SupportPhysique` (DVD / Blu-ray / Blu-ray 4K) déjà en place pour les exemplaires.
+
+### Situation actuelle (v0.8.0)
+
+| Emplacement | Rôle |
+|------------|------|
+| `bibliotheque.ean` | Code-barres sur **mon exemplaire** (collection ou envie) |
+| `oeuvre_eans` | EAN **catalogue** par œuvre et par support (DVD / Blu-ray / 4K) |
+| Fiche œuvre admin | Section « Codes EAN catalogue » + formulaire d’ajout |
+| Fiche film | Suggestion d’EAN catalogue selon le support choisi |
+
+### Modèle cible
+
+```text
+oeuvre_eans
+  - id
+  - oeuvre_id       → oeuvres(id)
+  - ean             TEXT NOT NULL   (chiffres uniquement, 8–14 car.)
+  - support_physique TEXT NOT NULL  -- 'dvd' | 'bluray' | 'bluray_4k' | '' (édition générique)
+  - label           TEXT            -- libellé libre optionnel « Édition digibook »
+  - source          TEXT            -- 'manual' | 'import' | 'submission' (optionnel)
+  - created_at
+
+  UNIQUE (oeuvre_id, support_physique)   -- un EAN par type de support et par œuvre
+  UNIQUE (ean)                           -- un EAN ne pointe que vers une œuvre
+```
+
+> Le champ `bibliotheque.ean` reste possible pour l’exemplaire réellement possédé ; à terme, choisir un **support** dans le formulaire peut **proposer** l’EAN catalogue correspondant.
+
+### Migrations SQL prévues
+
+```text
+023_oeuvre_eans.sql
+  - table oeuvre_eans (voir ci-dessus)
+  - index oeuvre_id, index ean
+  - migration optionnelle : recopier les EAN distincts déjà présents sur bibliotheque
+    vers oeuvre_eans si support_physique renseigné (script PHP post-migration)
+```
+
+> Numérotation **023** pour ne pas croiser 017 (partage visiteur) ni 018+ (prêts, stockage…). Peut être livrée **en parallèle** de la phase 7.
+
+### Tâches
+
+| # | Tâche |
+|---|--------|
+| 6b.1 | Table + repository `OeuvreEanRepository` (CRUD, liste par `oeuvre_id`, recherche par EAN) | ✅ |
+| 6b.2 | Fiche **catalogue** (`oeuvre.php` / admin) : section « Codes EAN » avec ajout / suppression par support | ✅ |
+| 6b.3 | Validation : EAN numérique, longueur, unicité globale, support parmi `SupportPhysique` | ✅ |
+| 6b.4 | Soumissions catalogue : champs optionnels EAN + support dans la proposition ; reprise à la validation | — (ultérieur) |
+| 6b.5 | Formulaire **Mes films** : suggestion de l’EAN catalogue selon le support | ✅ |
+| 6b.6 | Import CSV catalogue : colonnes EAN multiples | — (ultérieur) |
+| 6b.7 | Tests PHPUnit : unicité EAN, plusieurs supports sur une œuvre | ✅ |
+
+### Recherche d’achat (phase ultérieure — rappel)
+
+| # | Idée (non livré en 6 bis) |
+|---|---------------------------|
+| — | Rechercher un film par **scan** ou saisie EAN → retrouver l’œuvre catalogue |
+| — | Comparer les prix / disponibilité par support (API externe ou liens) |
+| — | Alertes « bon plan » sur un EAN de la wishlist |
+
+La phase 6 bis **prépare** ces évolutions sans implémenter d’API marchande en v1.
+
+### Critère terminé
+
+Sur la fiche catalogue d’un film, l’admin (ou une proposition validée) peut enregistrer **au moins deux EAN** pour des supports différents (ex. DVD + Blu-ray) ; la recherche par EAN renvoie **une seule** œuvre ; aucun doublon d’EAN sur deux œuvres différentes.
+
+### Points d’attention
+
+- **BD / magazines** : même mécanisme via `moncine_kind` et supports adaptés plus tard (phase 11+).
+- **EAN invalide ou doublon import** : rejet avec message clair en admin.
+- **Confidentialité** : les EAN catalogue ne sont pas des données personnelles ; visibles sur fiche catalogue comme le reste des métadonnées partagées.
 
 ---
 
-## Phase 6 — Mes BD → **paquet 4.0.0**
+## Phase 7 — Partage visiteur (lien lecture seule)
 
-Extensions `moncine_kind` / métadonnées BD, pages dédiées, import CSV, soumissions BD.
+**Statut : livré** (v0.8.0, migration `017_share_links.sql`).
+
+**Objectif :** permettre à un utilisateur connecté de **générer un lien** qu’il envoie à un proche (sans compte Moncine). Le **visiteur** ouvre une page publique en **lecture seule** :
+
+- **Mes films** : la collection du **groupe famille** (foyer), comme sur l’écran connecté mais sans boutons d’action ;
+- **Mes envies** : la wishlist **personnelle** de l’utilisateur qui a créé le lien ;
+- **Fiche film** : en cliquant sur un titre, le visiteur voit la fiche (métadonnées catalogue + infos exemplaire partagées), **sans** pouvoir modifier, noter, prêter, supprimer ou accéder au reste du site.
+
+**Aucune modification** n’est possible pour le visiteur : pas de formulaires POST utiles, pas d’accès admin, catalogue, comptes, import, ni aux données d’autres membres (e-mails, notes privées, historique détaillé d’autrui).
+
+**Dépend de :** phases 2 et 4 (collection + wishlist) ; phase 6 utile (groupe famille) mais pas bloquante.
+
+### Principe
+
+| Élément | Règle |
+|---------|--------|
+| Qui crée le lien | Utilisateur **connecté** (Paramètres, Mes films ou Mes envies) |
+| Portée **collection** | `foyer_id` du groupe actif → liste = **Mes films** du foyer |
+| Portée **wishlist** | `user_id` du créateur → liste = **ses** envies uniquement |
+| URL | Chemin dédié, ex. `/partage/{jeton}` — jeton **long**, **aléatoire**, **non devinable** |
+| Stockage jeton | En base : **hash** du jeton uniquement (comme un mot de passe), jamais le jeton en clair après création |
+| Expiration | Optionnelle (`expires_at`) ; révocation immédiate par le propriétaire |
+| Visiteur | **GET uniquement** ; pages hors `Auth::enforceWebAccess()` mais contrôlées par service dédié |
+
+```mermaid
+flowchart LR
+    U[Utilisateur connecté]
+    U -->|Crée lien + copie URL| L[share_links]
+    V[Visiteur sans compte]
+    V -->|GET /partage/token| P[Pages visiteur]
+    P -->|Liste| F[Mes films ou Mes envies]
+    P -->|Clic film| D[Fiche film lecture seule]
+    L -.->|Valide hash + scope| P
+```
+
+### Migrations SQL prévues
+
+```text
+017_share_links.sql
+  - share_links (
+      id, token_hash, scope TEXT NOT NULL,  -- 'collection' | 'wishlist'
+      foyer_id INTEGER NULL,                -- si scope = collection
+      user_id INTEGER NOT NULL,             -- créateur du lien
+      label TEXT,                           -- nom optionnel « Lien famille »
+      created_at, expires_at, revoked_at,
+      last_access_at, access_count
+    )
+  - index sur token_hash (unique), user_id, foyer_id
+```
+
+> Numérotation : **017** (après 016 amis/groupes). Les prêts passeront en **018**.
+
+### Tâches fonctionnelles
+
+| # | Tâche |
+|---|--------|
+| 7.1 | Page **Mes films** / **Mes envies** : bouton « Partager » → `/gerer-partages.php` | ✅ |
+| 7.2 | Page **Paramètres** : section partage + `/gerer-partages.php` (créer, révoquer, libellé) | ✅ |
+| 7.3 | Route publique **`/partage.php`** : validation jeton, liste collection ou wishlist | ✅ |
+| 7.4 | Vue visiteur : **Liste** / **Vignettes**, affiches, filtres type, recherche, tri (comme Mes films) | ✅ |
+| 7.5 | Scope **wishlist** : liste personnelle du créateur uniquement | ✅ |
+| 7.6 | Vue visiteur **`/partage-film.php`** : fiche lecture seule + retour liste | ✅ |
+| 7.7 | Navigation Préc./Suiv. entre fiches du scope partagé | — (ultérieur) |
+
+### Exigences de sécurité (anti-abus / « piratage »)
+
+| # | Mesure |
+|---|--------|
+| S1 | Jeton **≥ 32 octets** aléatoires (`random_bytes`) ; affiché **une seule fois** à la création |
+| S2 | En base : **`token_hash`** (ex. `hash('sha256', $token)`) — fuite SQL ≠ accès direct |
+| S3 | Chaque requête visiteur : résolution par hash + vérif **non révoqué** + **non expiré** + scope cohérent |
+| S4 | **Rate limiting** sur `/partage/*` (par IP et par jeton) — anti brute-force du token |
+| S5 | **GET seulement** sur routes visiteur ; aucun POST/PUT/DELETE sans session |
+| S6 | Le visiteur **ne peut pas** deviner d’autres `film_id` : fiche accessible **uniquement** si le film appartient au scope du lien (requête filtrée par `share_link_id` + `foyer_id` / `user_id`) |
+| S7 | Pas d’exposition : e-mails, mots de passe, utilisateurs du foyer, envies des **autres** membres, admin, maintenance, TMDB clés API |
+| S8 | Pas d’**énumération** : message générique « Lien invalide ou expiré » (même code HTTP 404 ou 403 selon choix documenté) |
+| S9 | En-têtes : `X-Robots-Tag: noindex`, `Referrer-Policy`, pas de session visiteur inutile |
+| S10 | Journal optionnel : `access_count`, `last_access_at` pour détecter un lien trop diffusé |
+| S11 | Le propriétaire peut **révoquer** instantanément ; changement de foyer / quitter le groupe **invalide** les liens collection concernés |
+
+### Pages et fichiers cibles (indicatif)
+
+| Fichier | Rôle |
+|---------|------|
+| `lib/ShareLinkService.php` | Création, révocation, validation jeton, résolution scope |
+| `lib/ShareLinkRepository.php` | Accès SQL `share_links` |
+| `www/partage.php` | Point d’entrée visiteur (token en query ou path) |
+| `www/gerer-partages.php` | Gestion des liens (connecté, POST + CSRF) |
+| `templates/partage.php`, `partage-film.php`, `_partage_collection_*.php` | Listes et fiche film **visiteur** |
+| `lib/Auth.php` | Ajouter chemins `/partage.php`, `/partage-film.php` (ou équivalent) à `PUBLIC_PATHS` |
+
+### Critère terminé
+
+1. Depuis **Mes films**, l’utilisateur copie un lien ; un invité voit la **collection du foyer** et peut ouvrir chaque **fiche** en lecture seule.  
+2. Depuis **Mes envies**, il copie un lien ; l’invité voit **ses envies** uniquement.  
+3. L’invité ne peut **rien modifier** ni accéder au reste de Moncine sans connexion.  
+4. Un lien **révoqué** ou **expiré** ne fonctionne plus ; un jeton invalide ne donne aucune information sur l’existence d’un compte.
+
+### Points d’attention (phase 7)
+
+- **Wishlist** = personnelle ; **collection** = partagée par le groupe : deux liens distincts, deux scopes.  
+- **Affiches** : servies comme aujourd’hui si déjà publiques côté app ; pas d’URL directe vers `data/` hors contrôle PHP si politique stricte.  
+- **Export PDF** : reporté à la **phase 10** (même domaine « partage », livrable différent).  
+- Tests PHPUnit : validation jeton, scope film, refus ID hors scope, révocation.
 
 ---
 
-## Checklist avant chaque release YunoHost
+## Phase 8 — Prêts entre utilisateurs
 
-1. Numéro de version paquet et `schema_version` cible documentés dans ce fichier  
-2. Fichiers SQL nouveaux uniquement (jamais modifier 002–015 publiés)  
-3. Test **install fraîche** (schéma vide → dernière migration)  
-4. Test **upgrade** depuis paquet N-1 avec DB réelle anonymisée  
-5. Test **backup / restore** + migrate  
-6. Notes de version YunoHost (`README_fr.md` du paquet) : migrations, actions manuelles éventuelles  
-7. Vérifier que `data/` et `moncine.db` ne sont pas dans l’archive `sources`  
+**Objectif :** suivre ce qui a été **prêté** (DVD, BD, magazine…), **à qui**, **quand**, et le **retour** — à un ami Moncine ou à une personne externe (nom libre).
+
+**Dépend de :** phases 4, 6 et 7 (recommandé : partage visiteur stabilisé avant prêts).
+
+### Migrations SQL prévues
+
+```text
+018_loans.sql
+  - loans (bibliotheque_id, lender_user_id, borrower_user_id NULL,
+    borrower_name TEXT, loaned_at, due_at, returned_at, note)
+```
+
+| # | Tâche |
+|---|--------|
+| 8.1 | Marquer un exemplaire comme **prêté** (date de départ) |
+| 8.2 | Bénéficiaire : utilisateur **ami** ou **nom libre** |
+| 8.3 | Date de retour prévue et **retour effectif** |
+| 8.4 | Vues **Prêts en cours** / **Historique** |
+| 8.5 | Indicateur sur la fiche (« prêté à … ») |
+| 8.6 | Rappels d’échéance — optionnel v1 |
+
+**Critère terminé :** les exemplaires prêtés sont identifiables ; un retour remet l’exemplaire en disponible.
 
 ---
 
-## Décisions techniques à trancher tôt
+## Phase 9 — Stockage de fichiers (dossier partagé & S3)
 
-| Sujet | Recommandation pour le paquet |
-|-------|-------------------------------|
-| Authentification | Session PHP + `password_hash` (défaut) |
+**Objectif :** stocker les **fichiers volumineux** (PDF magazines, etc.) hors `www/`, avec un dossier personnalisable type **YunoHost** et une option **stockage objet S3** (MinIO, Scaleway, AWS, B2…) pour des volumes économiques.
+
+**Dépend de :** phase 1 (configuration instance). **Prérequis** pour la phase 13 (PDF magazines).
+
+### Configuration cible (exemple YunoHost)
+
+```text
+/home/yunohost.multimedia/share/moncine/
+  ├── objects/     # PDF et binaires
+  ├── posters/     # affiches (migration possible)
+  └── exports/     # PDF générés
+```
+
+| Variable | Exemple | Rôle |
+|----------|---------|------|
+| `MONCINE_DATA_PATH` | `…/data` | SQLite, clés API |
+| `MONCINE_MEDIA_PATH` | `/home/yunohost.multimedia/share/moncine` | Racine médias |
+| `MONCINE_STORAGE_BACKEND` | `local` ou `s3` | Moteur |
+| `MONCINE_S3_*` | endpoint, bucket, clés | Si S3 |
+
+### Migrations SQL prévues
+
+```text
+019_stored_objects.sql
+  - stored_objects (backend local|s3, path_or_key, mime, size_bytes, checksum, …)
+  - app_metadata : chemins et mode de stockage
+```
+
+| # | Tâche |
+|---|--------|
+| 9.1 | Interface **`ObjectStorage`** (put, get, delete, stream) |
+| 9.2 | Backend **filesystem local** (`MONCINE_MEDIA_PATH`) |
+| 9.3 | Backend **S3-compatible** |
+| 9.4 | Config admin : local vs S3, test de connexion |
+| 9.5 | Doc déploiement YunoHost (droits, backup du share) |
+| 9.6 | Lecture des fichiers **via PHP** (pas d’URL publique directe) |
+
+**Critère terminé :** dossier share ou bucket S3 configurable ; le code métier ne dépend plus d’un chemin fixe sous `www/`.
+
+### Points d’attention (phase 9)
+
+- **Coût** : S3 économique en volume ; lifecycle pour archives froides.
+- **Backup** : inclure share local et bucket dans la stratégie de sauvegarde.
+
+---
+
+## Phase 10 — Export PDF
+
+**Objectif :** permettre d’**exporter en PDF** la bibliothèque et la wishlist depuis **Mes films** et **Mes envies** (utilisateur connecté).
+
+**Dépend de :** phases 2, 4 et **7** (mêmes périmètres de données que le partage visiteur).
+
+> Le **partage par lien** (phase 7) est livré **avant** cette phase ; l’export PDF réutilise les listes déjà filtrées côté foyer / utilisateur.
+
+### Migrations SQL prévues
+
+Aucune table obligatoire (génération à la volée). Option : métadonnée `app_metadata` pour modèle de mise en page.
+
+| # | Tâche |
+|---|--------|
+| 10.1 | **Export PDF** depuis **Mes films** : collection du foyer (filtres / tri courants reflétés) |
+| 10.2 | **Export PDF** depuis **Mes envies** : wishlist personnelle |
+| 10.3 | Mise en page lisible (titres, années, réalisateurs, affiches optionnelles en miniature) |
+
+**Critère terminé :** depuis Mes films et Mes envies, un PDF téléchargeable reflète la liste affichée à l’écran.
+
+### Points d’attention (phase 10)
+
+- Pas d’exposer de données hors périmètre (notes d’autres membres, e-mails).
+- Taille du PDF raisonnable (pagination, limite de lignes si besoin).
+
+---
+
+## Phase 11 — Mes BD
+
+**Objectif :** gérer les bandes dessinées comme les films (collection, envies, statistiques).
+
+**Dépend de :** phases 2, 4, 7 et 10 (recommandé : partage visiteur et export films stabilisés).
+
+### Migrations SQL prévues
+
+```text
+020_oeuvres_bd_metadata.sql
+  - champs spécifiques BD sur oeuvres (série, tome, ISBN, …)
+  - moncine_kind = 'bd'
+```
+
+| # | Tâche |
+|---|--------|
+| 11.1 | Page Mes BD (collection + wishlist) |
+| 11.2 | Formulaires ajout / modification BD |
+| 11.3 | Import CSV étendu (format BD) |
+| 11.4 | Statistiques et filtres BD |
+| 11.5 | Soumissions BD (réutilise phase 5) |
+| 11.6 | Partage visiteur, export PDF et prêts BD (réutilise phases 7, 8 et 10) |
+
+**Critère terminé :** une BD peut être ajoutée, classée en collection ou envie, notée et exportée.
+
+---
+
+## Phase 12 — Collections de magazines
+
+**Objectif :** gérer des **collections de magazines** (titre de la revue, numéros, organisation) dans la bibliothèque du foyer, sur le même modèle que films et BD (collection / envies, fiche par numéro ou par parution).
+
+**Dépend de :** phases 4 et 11 (recommandé : foyers + habitudes « type d’œuvre » déjà en place pour BD).
+
+### Migrations SQL prévues
+
+```text
+021_magazine_collections.sql
+  - magazine_collections (nom, éditeur, périodicité, description, …)
+  - magazine_numeros (collection_id, numero, date_parution, titre_numero, …)
+  - lien bibliotheque / oeuvres ou tables dédiées selon modèle retenu
+  - moncine_kind = 'magazine' sur oeuvres si catalogue unifié
+```
+
+| # | Tâche |
+|---|--------|
+| 12.1 | Modèle de données magazines (collection + numéros) |
+| 12.2 | Page **Mes magazines** (liste des collections, numéros possédés / manquants) |
+| 12.3 | Ajout / édition d’une collection et d’un numéro |
+| 12.4 | Intégration foyer (collection partagée) et envies personnelles |
+| 12.5 | Import / export CSV magazines (schéma à définir) |
+| 12.6 | Filtres et statistiques de base (par collection, par année) |
+
+**Critère terminé :** une collection « Tintin magazine » (ex.) peut être créée, ses numéros référencés, et chaque numéro ajouté à la collection du foyer ou aux envies d’un membre.
+
+---
+
+## Phase 13 — Magazines PDF & lecteur
+
+**Objectif :** associer un **fichier PDF** à un numéro de magazine, via la **couche stockage (phase 9)**, et proposer un **lecteur PDF** intégré.
+
+**Dépend de :** phases 9 et 12 (stockage objets + numéros magazine en base).
+
+### Migrations SQL prévues
+
+```text
+022_magazine_pdf.sql
+  - magazine_fichiers (numero_id, stored_object_id, …)
+  - métadonnées optionnelles (nombre de pages, langue)
+```
+
+| # | Tâche |
+|---|--------|
+| 13.1 | Upload PDF → `stored_objects` (local ou S3) |
+| 13.2 | Fiche numéro : lien « Lire le PDF » |
+| 13.3 | Lecteur PDF (streaming via ObjectStorage) |
+| 13.4 | Contrôle d’accès (foyer ; pas d’URL publique vers le binaire) |
+| 13.5 | Quotas espace disque / bucket |
+| 13.6 | Doc sauvegarde share YunoHost et bucket S3 |
+
+**Critère terminé :** PDF consultable depuis Moncine ; fichier sous `MONCINE_MEDIA_PATH` ou S3, pas sous `www/`.
+
+### Points d’attention (phase 13)
+
+- **Volume** : S3 adapté aux gros catalogues PDF.
+- **Droits d’auteur** : usage personnel / foyer uniquement.
+- **Performance** : streaming par pages.
+
+---
+
+## Import / export de données
+
+Fonctionnalité transversale déjà partiellement en place :
+
+| # | Tâche | Statut |
+|---|--------|--------|
+| I.1 | Export CSV (collection, envies, historique) | ✅ |
+| I.2 | Import CSV bibliothèque | ✅ |
+| I.3 | Import CSV catalogue (admin) | ✅ |
+| I.4 | Export/import affiches (`posters/`) | ✅ |
+| I.5 | Documentation utilisateur import/export | À enrichir |
+
+---
+
+## Checklist avant chaque release applicative
+
+1. Numéro de version et `schema_version` cible documentés dans ce fichier
+2. Fichiers SQL nouveaux uniquement (ne jamais modifier une migration déjà publiée)
+3. Test **install fraîche** (`schema.sql` + toutes les migrations)
+4. Test **upgrade** depuis la version précédente sur une base de test
+5. Tests PHPUnit (`composer test`)
+6. Notes de version : migrations, actions manuelles éventuelles
+7. Entrée dans **`CHANGELOG.md`** et tag Git annoté **`vX.Y.Z`** (ex. `v0.8.0`)
+
+---
+
+## Décisions techniques
+
+| Sujet | Choix retenu |
+|-------|--------------|
+| Authentification | Session PHP + `password_hash` |
 | Collection foyer | `foyer_id` sur `bibliotheque` (collection) |
 | Wishlist | `user_id` personnel |
-| BD | Même table `oeuvres`, type `bd` |
-| SSO YunoHost | Option ultérieure dans `manifest.toml` |
-| Install vs My Webapp | Paquet dédié `moncine` ; doc migration depuis My Webapp (copier `data/`) |
-
----
-
-## Bascule depuis la production actuelle (export / import)
-
-**Pas de copie directe de `moncine.db`** vers le paquet : les schémas divergeront (comptes, foyers, champs déplacés).
-
-Procédure cible :
-
-1. Sur l’**ancienne prod figée** : export (CSV étendu et/ou sauvegarde `data/` pour les affiches)  
-2. Installer le **paquet Moncine** (base vide, schéma à jour)  
-3. Configurer admin / foyer selon la version du paquet  
-4. **Importer** les données via l’outil prévu (page Importer enrichie ou import dédié « migration »)  
-5. Recopier le dossier **`posters/`** si les chemins locaux sont utilisés  
-6. Vérifier comptages (films, envies, historique) puis basculer l’URL / désactiver l’ancienne app  
-
-Documenter dans le paquet : `doc/migration-export-import.md`.
-
-Les **upgrades YunoHost** ultérieurs (2.0 → 3.0, etc.) restent des migrations SQL **sur la base du paquet**, pas sur l’ancienne prod.
+| BD | Même table `oeuvres`, type `bd` via `moncine_kind` |
+| Soumissions catalogue | Table `catalogue_soumissions` ; validation admin ; utilisateurs non admin ne créent plus d’œuvres directement (v0.7.4) |
+| Notifications | Table `notifications` ; e-mail optionnel (`MailService`, `MONCINE_MAIL_FROM`) |
+| Amis / foyers | Amis = socle ; **groupe famille** = ancien foyer, **créé par les utilisateurs** (plus par l’admin) ; table `foyers` + `group_members` (phase 6) |
+| EAN catalogue | Table `oeuvre_eans` (oeuvre + support + ean unique) ; socle recherche d’achat (phase 6 bis) |
+| Partage visiteur | Jeton hashé, scope collection\|wishlist, pages GET lecture seule (phase 7) |
+| Prêts | Table `loans` liée à `bibliotheque` (phase 8) |
+| Stockage fichiers | `MONCINE_MEDIA_PATH` + backends `local` / `s3` (phase 9) |
+| Export PDF | PDF généré côté serveur (phase 10) |
+| Magazines | Collections + numéros (phase 12) ; PDF via ObjectStorage (phase 13) |
+| Chemins données | `MONCINE_DATA_PATH` (SQLite, clés) ; `MONCINE_MEDIA_PATH` (objets, affiches) |
 
 ---
 
 ## Hors périmètre (pour plus tard)
 
-- Application mobile native  
-- Sync multi-instances  
-- Marketplace entre foyers  
-- API publique  
-- Authentification à deux facteurs (2FA) — après phase 1 bis  
+- Application mobile native
+- Sync multi-instances
+- Marketplace entre foyers
+- API publique
+- Authentification à deux facteurs (2FA)
 
 ---
 
 ## Suivi de la roadmap
 
-```markdown
 ### Historique
-- 2026-05-XX — Roadmap enrichie : paquet YunoHost + stratégie migrations SQL
-- 2026-05-XX — Prod actuelle figée ; bascule par export/import (pas migration SQL legacy)
-- 2026-05-XX — Recommandation : développement paquet dans un dossier séparé (`moncine-app/` ou dépôt neuf)
-- 2026-05-XX — Dossier `Moncine/` = paquet ; `Moncine (origine)/` = prod figée ; phase 0 amorcée (SchemaMigrator, yunohost/)
-- 2026-05-16 — Phase **1 bis** ajoutée (paquet 2.0.1) : changer son mot de passe, oublié par e-mail, reset admin
-- 2026-05-16 — Phase **1 bis** livrée en dev : `mon-compte`, oublié, reset par jeton, admin « Réinit. MDP », migration `004`
-- 2026-05-16 — Paquet YunoHost v2 finalisé à la racine du dépôt (install / upgrade / backup testables)
-- 2026-05-16 — Phase **2** livrée en dev (paquet 2.1.0) : `format_image` / `format_son` sur `bibliotheque`, formulaire « mon exemplaire », TMDB enrich réservé admin
-- (à compléter à chaque release)
-```
+
+- 2026-05-19 — **Phase 5 validée** — version **0.7.4** : soumissions catalogue, notifications, navigation catalogue/fiches, menus Compte / Paramètres / Gestion
+- 2026-05-19 — Version **0.7.2** : profil (prénom, pseudo), menu Gestion / Paramètres, navigation Préc./Suiv. entre fiches film
+- 2026-05-19 — Version **0.7.1** : dépôt d’affiche manuel sur une fiche catalogue (admin)
+- 2026-05-16 — Phases **1**, **1 bis** et **2** livrées (comptes, mots de passe, champs exemplaire)
+- 2026-05-19 — Roadmap recentrée sur les **fonctionnalités logicielles** ; séparation upstream / packaging externalisée
+- 2026-05-19 — Version **0.7.0** : phase **4** (foyers, collection partagée, envies et historique personnels)
+- 2026-05-19 — Version **0.6.0** : phase **3** (maintenance catalogue : doublons, fusion, journal, nettoyage affiches)
+- 2026-05-19 — Version **0.51.0** : correction création premier compte, mise en page fiches sans affiche
 
 ---
 
@@ -588,17 +886,32 @@ Les **upgrades YunoHost** ultérieurs (2.0 → 3.0, etc.) restent des migrations
 
 | Sujet | Fichiers |
 |-------|----------|
-| Connexion DB + migrations | `lib/Database.php` |
-| Chemins données (YNH) | `lib/config.php` (`MONCINE_DATA_PATH`) |
-| Utilisateur courant | `lib/UserContext.php` |
+| Connexion DB + migrations | `lib/Database.php`, `lib/SchemaMigrator.php` |
+| Chemins données | `lib/config.php` (`MONCINE_DATA_PATH`) |
+| Utilisateur courant | `lib/UserContext.php`, `lib/FoyerRepository.php` |
 | Connexion / session | `lib/Auth.php`, `lib/LoginThrottle.php` |
 | Comptes (admin) | `www/utilisateurs.php`, `lib/UtilisateurRepository.php` |
-| Mots de passe (phase 1 bis) | `www/mon-compte.php`, `www/mot-de-passe-oublie.php` |
-| Format exemplaire (phase 2) | `sql/migrations/005_*.sql`, `lib/CatalogSchema.php` |
-| Migration catalogue | `sql/migrations/013_catalogue_bibliotheque.sql` |
-| Schéma neuf | `sql/schema.sql` |
-| Déploiement manuel actuel | `README.md` |
+| Mots de passe | `www/mon-compte.php`, `www/mot-de-passe-oublie.php` |
+| Format exemplaire | `sql/migrations/005_*.sql`, `lib/CatalogSchema.php` |
+| Import / export | `www/import.php`, `www/export.php` |
+| Maintenance catalogue | `www/maintenance-catalogue.php`, `lib/CatalogMaintenance.php` |
+| Soumissions & notifications | `lib/CatalogSubmission.php`, `lib/NotificationService.php`, `www/proposer-oeuvre.php`, `www/soumissions-catalogue.php` |
+| Navigation listes | `lib/FilmListContext.php`, `lib/CatalogListContext.php` |
+| Schéma | `sql/schema.sql` |
+| CLI migrations | `lib/cli/migrate.php` |
+| Journal des versions | `CHANGELOG.md` |
+| Styles UI (pilules / filtres) | `www/assets/css/style.css` (`.ui-pill`, `.ui-pill-bar`) |
+| Partage visiteur (v0.8.0) | `lib/ShareLinkService.php`, `www/partage.php`, `www/gerer-partages.php`, `017_share_links.sql` |
+| EAN catalogue (v0.8.0) | `lib/OeuvreEanRepository.php`, `www/enregistrer-oeuvre-ean.php`, `023_oeuvre_eans.sql` |
 
 ---
 
-*Dernière mise à jour : mai 2026 — document vivant : mettre à jour la table « versions paquet » à chaque release.*
+### Historique roadmap (récent)
+
+- 2026-05-19 — **Version 0.8.0** : phases **6 bis** (EAN catalogue) et **7** (partage visiteur) livrées ; liste partagée avec affiches et modes Liste / Vignettes.
+- 2026-05-21 — **Phase 7 redéfinie** : partage visiteur (lien lecture seule Mes films / Mes envies + fiche film) **avant** les prêts ; anciennes phases 7–12 renumérotées en 8–13 ; export PDF séparé (phase 10).
+- 2026-05-21 — **Phase 6 bis** : EAN multiples par œuvre catalogue (DVD / Blu-ray / 4K), préparation recherche d’achat.
+
+---
+
+*Dernière mise à jour : 19 mai 2026 — v0.8.0 ; prochaine cible : **phase 8** (prêts entre utilisateurs).*

@@ -45,9 +45,14 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
 <section class="collection-page">
     <div class="collection-page__head">
         <h1>Mes films</h1>
-        <a class="btn btn-primary" href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::COLLECTION)) ?>">
-            Ajouter un film
-        </a>
+        <div class="collection-page__head-actions">
+            <a class="btn btn-secondary" href="/gerer-partages.php?scope=<?= Moncine\ShareLinkScope::COLLECTION ?>">
+                Partager
+            </a>
+            <a class="btn btn-primary" href="<?= Moncine\View::escape(Moncine\View::addFilmUrl(Moncine\LibraryStatut::COLLECTION)) ?>">
+                Ajouter un film
+            </a>
+        </div>
     </div>
 
     <form method="get" action="/films.php" class="collection-search import-form">
@@ -73,27 +78,27 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
         </div>
     </form>
 
-    <nav class="collection-kind-filters" aria-label="Filtrer par type et accéder aux sagas">
+    <nav class="ui-pill-nav" aria-label="Filtrer par type et accéder aux sagas">
         <?php foreach (\Moncine\ContentKindFilter::choices() as $kindKey => $kindChoiceLabel): ?>
             <?php
             $kindActive = $kindFilter === $kindKey;
-            $kindClass = 'collection-kind-filters__btn' . ($kindActive ? ' is-active' : '');
+            $kindClass = 'ui-pill' . ($kindActive ? ' ui-pill--active' : '');
             ?>
             <a href="<?= Moncine\View::escape(Moncine\View::filmsCollectionUrl($query, $sortBy, $sortDir, $kindKey, $viewMode)) ?>"
                class="<?= $kindClass ?>"<?= $kindActive ? ' aria-current="page"' : '' ?>>
                 <?= Moncine\View::escape($kindChoiceLabel) ?>
             </a>
         <?php endforeach; ?>
-        <a href="/sagas.php" class="collection-kind-filters__btn collection-kind-filters__btn--sagas">
+        <a href="/sagas.php" class="ui-pill ui-pill--outline-accent">
             Sagas
         </a>
     </nav>
 
-    <nav class="collection-view-toggle" aria-label="Mode d’affichage">
+    <nav class="ui-pill-bar" aria-label="Mode d’affichage">
         <?php foreach (\Moncine\CollectionViewMode::choices() as $modeKey => $modeLabel): ?>
             <?php
             $modeActive = $viewMode === $modeKey;
-            $modeClass = 'collection-view-toggle__btn' . ($modeActive ? ' is-active' : '');
+            $modeClass = 'ui-pill-bar__item' . ($modeActive ? ' ui-pill--active' : '');
             ?>
             <a href="<?= Moncine\View::escape(Moncine\View::filmsCollectionUrl($query, $sortBy, $sortDir, $kindFilter, $modeKey)) ?>"
                class="<?= $modeClass ?>"<?= $modeActive ? ' aria-current="true"' : '' ?>>

@@ -348,8 +348,8 @@ textarea {
     width: 100%;
 }
 
-.collection-kind-filters,
-.collection-view-toggle {
+.ui-pill-nav,
+.ui-pill-bar {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     flex-wrap: nowrap;
@@ -357,8 +357,8 @@ textarea {
     padding-bottom: 0.15rem;
 }
 
-.collection-kind-filters__btn,
-.collection-view-toggle__btn {
+.ui-pill,
+.ui-pill-bar__item {
     flex-shrink: 0;
 }
 
@@ -456,8 +456,8 @@ textarea {
         width: auto;
     }
 
-    .collection-kind-filters,
-    .collection-view-toggle {
+    .ui-pill-nav,
+    .ui-pill-bar {
         flex-wrap: wrap;
         overflow: visible;
     }

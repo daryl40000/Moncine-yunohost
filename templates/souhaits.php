@@ -37,16 +37,21 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
 <section class="collection-page wishlist-page">
     <div class="collection-page__head">
         <h1><?= Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST)) ?></h1>
+        <?php if (!$isGroupScope): ?>
+            <a class="btn btn-secondary" href="/gerer-partages.php?scope=<?= Moncine\ShareLinkScope::WISHLIST ?>">
+                Partager mes envies
+            </a>
+        <?php endif; ?>
     </div>
 
     <?php if ($canShowGroup): ?>
-        <nav class="wishlist-scope-tabs" aria-label="Portée des envies">
+        <nav class="ui-pill-nav" aria-label="Portée des envies">
             <a href="<?= Moncine\View::escape(Moncine\View::wishlistUrl($query, $sortBy, $sortDir, Moncine\WishlistScope::MINE)) ?>"
-               class="wishlist-scope-tabs__tab<?= !$isGroupScope ? ' wishlist-scope-tabs__tab--active' : '' ?>">
+               class="ui-pill<?= !$isGroupScope ? ' ui-pill--active' : '' ?>">
                 Mes envies
             </a>
             <a href="<?= Moncine\View::escape(Moncine\View::wishlistUrl($query, 'votes', 'desc', Moncine\WishlistScope::GROUP)) ?>"
-               class="wishlist-scope-tabs__tab<?= $isGroupScope ? ' wishlist-scope-tabs__tab--active' : '' ?>">
+               class="ui-pill<?= $isGroupScope ? ' ui-pill--active' : '' ?>">
                 Envies du groupe<?= $groupName !== '' ? ' — ' . Moncine\View::escape($groupName) : '' ?>
             </a>
         </nav>

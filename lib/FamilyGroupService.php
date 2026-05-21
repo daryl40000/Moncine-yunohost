@@ -153,7 +153,11 @@ final class FamilyGroupService
         if (!$this->isMember($foyerId, $inviterId)) {
             return 'Vous n’êtes pas membre de ce groupe.';
         }
-        if (!(new FriendshipRepository())->areFriends($inviterId, $inviteeId)) {
+        $friendRepo = new FriendshipRepository();
+        if ($friendRepo->isBlockedBetween($inviterId, $inviteeId)) {
+            return 'Impossible d’inviter cette personne.';
+        }
+        if (!$friendRepo->areFriends($inviterId, $inviteeId)) {
             return 'Vous devez être amis pour inviter cette personne.';
         }
         if ($this->userHasFamilyGroup($inviteeId)) {

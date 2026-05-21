@@ -102,6 +102,9 @@ final class NotificationTest extends MoncineTestCase
         $rows = $service->listForUser($userId);
         $this->assertSame(NotificationRepository::KIND_SUBMISSION_APPROVED, $rows[0]['kind'] ?? '');
         $this->assertStringContainsString('acceptée', strtolower((string) ($rows[0]['title'] ?? '')));
+        $this->assertNotSame('', trim((string) ($rows[0]['body'] ?? '')));
+        $this->assertStringContainsString('oeuvre_id=', (string) ($rows[0]['link_url'] ?? ''));
+        $this->assertGreaterThan(0, (int) ($rows[0]['related_oeuvre_id'] ?? 0));
     }
 
     public function testRejectNotifiesSubmitter(): void

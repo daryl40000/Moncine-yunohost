@@ -3,6 +3,7 @@
  * @var list<array<string, mixed>> $friends
  * @var list<array<string, mixed>> $pendingReceived
  * @var list<array<string, mixed>> $pendingSent
+ * @var list<array<string, mixed>> $blockedUsers
  * @var bool $socialAvailable
  * @var string $error
  * @var string $success
@@ -82,6 +83,7 @@
         <?php else: ?>
             <ul class="user-search-results">
                 <?php foreach ($friends as $row): ?>
+                    <?php $friendUserId = (int) ($row['id'] ?? 0); ?>
                     <li class="user-search-results__item">
                         <span class="user-search-results__name">
                             <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
@@ -89,6 +91,32 @@
                         <?php if (trim((string) ($row['ville'] ?? '')) !== ''): ?>
                             <span class="user-search-results__meta"><?= Moncine\View::escape((string) $row['ville']) ?></span>
                         <?php endif; ?>
+                        <form method="post" action="/mes-amis.php" class="inline-form">
+                            <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                            <input type="hidden" name="action" value="block">
+                            <input type="hidden" name="blocked_user_id" value="<?= $friendUserId ?>">
+                            <button type="submit" class="btn btn-secondary btn-sm">Bloquer</button>
+                        </form>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
+        <?php if ($blockedUsers !== []): ?>
+            <h2>Utilisateurs bloqués</h2>
+            <ul class="user-search-results">
+                <?php foreach ($blockedUsers as $row): ?>
+                    <?php $blockedUserId = (int) ($row['id'] ?? 0); ?>
+                    <li class="user-search-results__item">
+                        <span class="user-search-results__name">
+                            <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
+                        </span>
+                        <form method="post" action="/mes-amis.php" class="inline-form">
+                            <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                            <input type="hidden" name="action" value="unblock">
+                            <input type="hidden" name="blocked_user_id" value="<?= $blockedUserId ?>">
+                            <button type="submit" class="btn btn-secondary btn-sm">Débloquer</button>
+                        </form>
                     </li>
                 <?php endforeach; ?>
             </ul>

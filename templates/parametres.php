@@ -102,6 +102,18 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
         </div>
     </details>
 
+    <details class="catalog-admin-panel">
+        <summary class="catalog-admin-panel__summary">Partage visiteur</summary>
+        <div class="catalog-admin-panel__body">
+            <p class="hint">
+                Créez un lien lecture seule pour montrer vos films ou vos envies sans donner accès à votre compte.
+            </p>
+            <p>
+                <a href="/gerer-partages.php" class="btn btn-secondary">Gérer les liens de partage</a>
+            </p>
+        </div>
+    </details>
+
     <p class="collection-page__footer-links">
         <a href="/mes-amis.php">Mes amis</a>
         ·

@@ -155,6 +155,10 @@
                 require MONCINE_ROOT . '/templates/_enrich_entity_panel.php';
                 ?>
 
+                <?php
+                require MONCINE_ROOT . '/templates/_oeuvre_eans.php';
+                ?>
+
                 <section class="oeuvre-catalog-page__library">
                     <h2>Votre bibliothèque</h2>
                     <?php if ($inLibrary): ?>

@@ -21,6 +21,8 @@ final class Auth
         '/deconnexion.php',
         '/mot-de-passe-oublie.php',
         '/reinitialiser-mot-de-passe.php',
+        '/partage.php',
+        '/partage-film.php',
     ];
 
     /**

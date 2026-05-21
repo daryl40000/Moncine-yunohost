@@ -12,11 +12,11 @@
         <strong>DVD</strong>, <strong>Blu-ray</strong> ou <strong>Blu-ray 4K</strong>.
     </p>
 
-    <nav class="support-filters" aria-label="Types de support">
+    <nav class="ui-pill-nav support-filters" aria-label="Types de support">
         <?php foreach (Moncine\SupportPhysique::choices() as $key => $label): ?>
-            <?php $active = $searched && $type === $key ? ' support-filters__link--active' : ''; ?>
+            <?php $active = $searched && $type === $key ? ' ui-pill--active' : ''; ?>
             <a href="<?= Moncine\View::escape(Moncine\View::supportFilterUrl($key)) ?>"
-               class="support-filters__link<?= $active ?>"><?= Moncine\View::escape($label) ?></a>
+               class="ui-pill<?= $active ?>"><?= Moncine\View::escape($label) ?></a>
         <?php endforeach; ?>
     </nav>
 

@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\CatalogAdmin;
 use Moncine\CatalogListContext;
+use Moncine\OeuvreEanRepository;
 use Moncine\TmdbConfig;
 use Moncine\View;
 
@@ -68,12 +69,14 @@ if (isset($_GET['poster_uploaded']) && (string) $_GET['poster_uploaded'] === '1'
 }
 
 $oeuvreNav = $admin->getOeuvreNavigation($oeuvreId, $catalogSearch, $catalogSort, $catalogDir);
+$oeuvreEans = (new OeuvreEanRepository())->listForOeuvre($oeuvreId);
 
 View::render('oeuvre', [
     'pageTitle' => (string) ($oeuvre['titre'] ?? 'Œuvre catalogue'),
     'catalogListContext' => $catalogListContext,
     'oeuvreNav' => $oeuvreNav,
     'oeuvre' => $oeuvre,
+    'oeuvreEans' => $oeuvreEans,
     'library' => $detail['library'],
     'libraryCount' => (int) $detail['library_count'],
     'catalogueBackUrl' => $catalogueBackUrl,

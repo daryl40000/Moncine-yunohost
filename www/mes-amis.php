@@ -60,6 +60,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && FriendshipRepository::isAvailable()
         } else {
             $error = (string) $result;
         }
+    } elseif ($action === 'block') {
+        $blockedId = (int) ($_POST['blocked_user_id'] ?? 0);
+        $result = $friendRepo->blockUser($userId, $blockedId);
+        if ($result === true) {
+            $success = 'Utilisateur bloqué.';
+        } else {
+            $error = (string) $result;
+        }
+    } elseif ($action === 'unblock') {
+        $blockedId = (int) ($_POST['blocked_user_id'] ?? 0);
+        $result = $friendRepo->unblockUser($userId, $blockedId);
+        if ($result === true) {
+            $success = 'Blocage levé.';
+        } else {
+            $error = (string) $result;
+        }
     }
 }
 
@@ -68,6 +84,7 @@ View::render('mes_amis', [
     'friends' => FriendshipRepository::isAvailable() ? $friendRepo->listFriends($userId) : [],
     'pendingReceived' => FriendshipRepository::isAvailable() ? $friendRepo->listPendingReceived($userId) : [],
     'pendingSent' => FriendshipRepository::isAvailable() ? $friendRepo->listPendingSent($userId) : [],
+    'blockedUsers' => FriendshipRepository::isAvailable() ? $friendRepo->listBlockedUsers($userId) : [],
     'socialAvailable' => FriendshipRepository::isAvailable(),
     'error' => $error,
     'success' => $success,

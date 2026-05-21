@@ -107,6 +107,13 @@ $oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
             <?php endif; ?>
 
             <label for="edit_ean">Code-barres (EAN)</label>
+            <?php if (!empty($catalogEanSuggestion)): ?>
+                <p class="hint" id="catalog_ean_hint">
+                    EAN catalogue pour ce support :
+                    <code><?= Moncine\View::escape(Moncine\View::formatEan((string) $catalogEanSuggestion)) ?></code>
+                    — vous pouvez le recopier si votre exemplaire correspond.
+                </p>
+            <?php endif; ?>
             <input type="text" name="ean" id="edit_ean" inputmode="numeric"
                    placeholder="13 chiffres"
                    value="<?= Moncine\View::escape(Moncine\View::formatEan((string) ($film['ean'] ?? ''))) ?>">

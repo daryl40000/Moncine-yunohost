@@ -61,6 +61,13 @@
                         <?php endif; ?>
 
                         <?php if ($socialAvailable): ?>
+                            <?php
+                            $returnSearch = '/rechercher-utilisateurs.php';
+                            if ($pseudoQuery !== '' || $villeQuery !== '') {
+                                $returnSearch .= '?pseudo=' . rawurlencode($pseudoQuery)
+                                    . '&ville=' . rawurlencode($villeQuery);
+                            }
+                            ?>
                             <?php if ($rel === 'none'): ?>
                                 <form method="post" action="/demander-ami.php" class="inline-form">
                                     <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
@@ -69,12 +76,41 @@
                                     <input type="hidden" name="return_ville" value="<?= Moncine\View::escape($villeQuery) ?>">
                                     <button type="submit" class="btn btn-primary btn-sm">Demander en ami</button>
                                 </form>
+                                <form method="post" action="/bloquer-utilisateur.php" class="inline-form">
+                                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                                    <input type="hidden" name="blocked_user_id" value="<?= $uid ?>">
+                                    <input type="hidden" name="return_to" value="<?= Moncine\View::escape($returnSearch) ?>">
+                                    <button type="submit" class="btn btn-secondary btn-sm">Bloquer</button>
+                                </form>
                             <?php elseif ($rel === 'friends'): ?>
                                 <span class="user-search-results__meta">Ami</span>
+                                <form method="post" action="/bloquer-utilisateur.php" class="inline-form">
+                                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                                    <input type="hidden" name="blocked_user_id" value="<?= $uid ?>">
+                                    <input type="hidden" name="return_to" value="<?= Moncine\View::escape($returnSearch) ?>">
+                                    <button type="submit" class="btn btn-secondary btn-sm">Bloquer</button>
+                                </form>
                             <?php elseif ($rel === 'pending_sent'): ?>
                                 <span class="user-search-results__meta">Demande envoyée</span>
+                                <form method="post" action="/bloquer-utilisateur.php" class="inline-form">
+                                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                                    <input type="hidden" name="blocked_user_id" value="<?= $uid ?>">
+                                    <input type="hidden" name="return_to" value="<?= Moncine\View::escape($returnSearch) ?>">
+                                    <button type="submit" class="btn btn-secondary btn-sm">Bloquer</button>
+                                </form>
                             <?php elseif ($rel === 'pending_received'): ?>
                                 <a href="/mes-amis.php" class="btn btn-secondary btn-sm">Répondre à la demande</a>
+                                <form method="post" action="/bloquer-utilisateur.php" class="inline-form">
+                                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                                    <input type="hidden" name="blocked_user_id" value="<?= $uid ?>">
+                                    <input type="hidden" name="return_to" value="<?= Moncine\View::escape($returnSearch) ?>">
+                                    <button type="submit" class="btn btn-secondary btn-sm">Bloquer</button>
+                                </form>
+                            <?php elseif ($rel === 'blocked_by_me'): ?>
+                                <span class="user-search-results__meta">Bloqué</span>
+                                <a href="/mes-amis.php" class="btn btn-secondary btn-sm">Gérer les blocages</a>
+                            <?php elseif ($rel === 'blocked_me'): ?>
+                                <span class="user-search-results__meta">Indisponible</span>
                             <?php endif; ?>
                         <?php endif; ?>
                     </li>

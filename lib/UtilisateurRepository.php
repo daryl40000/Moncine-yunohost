@@ -390,13 +390,27 @@ final class UtilisateurRepository
         }
 
         if ($pseudoQuery !== '') {
-            $conditions[] = 'LOWER(TRIM(pseudo)) LIKE ?';
-            $params[] = '%' . mb_strtolower($pseudoQuery, 'UTF-8') . '%';
+            $conditions[] = "LOWER(TRIM(pseudo)) LIKE ? ESCAPE '\\'";
+            $params[] = LikePattern::containsFragment(mb_strtolower($pseudoQuery, 'UTF-8'));
         }
 
         if ($villeQuery !== '') {
-            $conditions[] = 'LOWER(TRIM(ville)) LIKE ?';
-            $params[] = '%' . mb_strtolower($villeQuery, 'UTF-8') . '%';
+            $conditions[] = "LOWER(TRIM(ville)) LIKE ? ESCAPE '\\'";
+            $params[] = LikePattern::containsFragment(mb_strtolower($villeQuery, 'UTF-8'));
+        }
+
+        if ($excludeUserId > 0 && FriendshipRepository::isAvailable()) {
+            $conditions[] = 'NOT EXISTS (
+                SELECT 1 FROM friendships fb
+                WHERE fb.status = ?
+                  AND (
+                    (fb.requester_id = ? AND fb.addressee_id = utilisateurs.id)
+                    OR (fb.requester_id = utilisateurs.id AND fb.addressee_id = ?)
+                  )
+            )';
+            $params[] = FriendshipRepository::STATUS_BLOCKED;
+            $params[] = $excludeUserId;
+            $params[] = $excludeUserId;
         }
 
         $sql = 'SELECT id, nom, prenom, pseudo, ville FROM utilisateurs WHERE '
