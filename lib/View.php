@@ -102,6 +102,52 @@ final class View
         return implode(' ; ', $parts);
     }
 
+    public static function userProfileUrl(int $userId): string
+    {
+        return $userId > 0 ? '/utilisateur.php?id=' . $userId : '/mes-amis.php';
+    }
+
+    public static function userProfileListUrl(
+        int $userId,
+        string $liste,
+        string $sortBy = 'titre',
+        string $currentSort = 'titre',
+        string $currentDir = 'asc',
+        ?int $yearFilter = null
+    ): string {
+        if ($userId <= 0) {
+            return '/mes-amis.php';
+        }
+
+        $liste = match ($liste) {
+            'envies', 'vus' => $liste,
+            default => 'collection',
+        };
+
+        $defaultDir = $liste === 'vus' ? 'desc' : 'asc';
+        $dir = $defaultDir;
+        if ($currentSort === $sortBy && strtolower($currentDir) === $defaultDir) {
+            $dir = $defaultDir === 'asc' ? 'desc' : 'asc';
+        }
+
+        $defaultSort = $liste === 'vus' ? 'date' : 'titre';
+        if ($sortBy === '' || ($liste === 'vus' && !in_array($sortBy, ['date', 'titre', 'note'], true))) {
+            $sortBy = $defaultSort;
+        }
+
+        $params = [
+            'id' => (string) $userId,
+            'liste' => $liste,
+            'sort' => $sortBy,
+            'dir' => $dir,
+        ];
+        if ($yearFilter !== null && $yearFilter > 0 && $liste === 'vus') {
+            $params['annee'] = (string) $yearFilter;
+        }
+
+        return '/utilisateur.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
     /** URL d’affiche pour src : chemin local /posters/… ou HTTPS distant (échappée). */
     public static function posterSrc(?string $url): string
     {

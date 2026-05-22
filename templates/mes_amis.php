@@ -4,15 +4,34 @@
  * @var list<array<string, mixed>> $pendingReceived
  * @var list<array<string, mixed>> $pendingSent
  * @var list<array<string, mixed>> $blockedUsers
+ * @var list<array<string, mixed>> $groupMembers
+ * @var string $groupName
  * @var bool $socialAvailable
  * @var string $error
  * @var string $success
  */
+$groupMembers = $groupMembers ?? [];
+$groupName = $groupName ?? '';
+
+$userProfileLink = static function (array $row): void {
+    $uid = (int) ($row['id'] ?? 0);
+    if ($uid <= 0) {
+        echo Moncine\View::escape(Moncine\UserProfile::displayName($row));
+
+        return;
+    }
+    ?>
+    <a href="<?= Moncine\View::escape(Moncine\View::userProfileUrl($uid)) ?>" class="user-profile-link">
+        <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
+    </a>
+    <?php
+};
 ?>
 <section class="account-page social-page">
     <h1>Mes amis</h1>
     <p class="lead">
-        Gérez vos amis Moncine. Les amis peuvent ensuite créer ou rejoindre un groupe famille ensemble.
+        Gérez vos amis Moncine et consultez le profil des membres de votre groupe.
+        Cliquez sur un nom pour voir ses statistiques et ses derniers films.
     </p>
 
     <?php if ($success !== ''): ?>
@@ -30,6 +49,22 @@
             <a href="/rechercher-utilisateurs.php">Rechercher des utilisateurs</a>
         </p>
 
+        <?php if ($groupMembers !== []): ?>
+            <h2>Membres du groupe<?= $groupName !== '' ? ' — ' . Moncine\View::escape($groupName) : '' ?></h2>
+            <ul class="user-search-results">
+                <?php foreach ($groupMembers as $row): ?>
+                    <li class="user-search-results__item">
+                        <span class="user-search-results__name">
+                            <?php $userProfileLink($row); ?>
+                        </span>
+                        <?php if (trim((string) ($row['ville'] ?? '')) !== ''): ?>
+                            <span class="user-search-results__meta"><?= Moncine\View::escape((string) $row['ville']) ?></span>
+                        <?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
         <?php if ($pendingReceived !== []): ?>
             <h2>Demandes reçues</h2>
             <ul class="user-search-results">
@@ -37,7 +72,7 @@
                     <?php $fid = (int) ($row['id'] ?? 0); ?>
                     <li class="user-search-results__item">
                         <span class="user-search-results__name">
-                            <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
+                            <?php $userProfileLink($row); ?>
                         </span>
                         <form method="post" action="/mes-amis.php" class="inline-form">
                             <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
@@ -63,7 +98,7 @@
                     <?php $fid = (int) ($row['id'] ?? 0); ?>
                     <li class="user-search-results__item">
                         <span class="user-search-results__name">
-                            <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
+                            <?php $userProfileLink($row); ?>
                         </span>
                         <span class="user-search-results__meta">En attente</span>
                         <form method="post" action="/mes-amis.php" class="inline-form">
@@ -86,7 +121,7 @@
                     <?php $friendUserId = (int) ($row['id'] ?? 0); ?>
                     <li class="user-search-results__item">
                         <span class="user-search-results__name">
-                            <?= Moncine\View::escape(Moncine\UserProfile::displayName($row)) ?>
+                            <?php $userProfileLink($row); ?>
                         </span>
                         <?php if (trim((string) ($row['ville'] ?? '')) !== ''): ?>
                             <span class="user-search-results__meta"><?= Moncine\View::escape((string) $row['ville']) ?></span>

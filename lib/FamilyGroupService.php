@@ -328,6 +328,29 @@ final class FamilyGroupService
         return (bool) $stmt->fetchColumn();
     }
 
+    /** Les deux utilisateurs appartiennent au même groupe famille (ou même foyer legacy). */
+    public function shareSameGroup(int $userIdA, int $userIdB): bool
+    {
+        if ($userIdA <= 0 || $userIdB <= 0 || $userIdA === $userIdB) {
+            return $userIdA > 0 && $userIdA === $userIdB;
+        }
+        if (!self::isAvailable()) {
+            $foyerA = (new FoyerRepository())->currentFoyerIdForUser($userIdA);
+            $foyerB = (new FoyerRepository())->currentFoyerIdForUser($userIdB);
+
+            return $foyerA > 0 && $foyerA === $foyerB;
+        }
+        $stmt = $this->db->prepare(
+            'SELECT 1 FROM group_members gm1
+             INNER JOIN group_members gm2 ON gm2.foyer_id = gm1.foyer_id
+             WHERE gm1.user_id = ? AND gm2.user_id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$userIdA, $userIdB]);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
     private function hasPendingInvitation(int $foyerId, int $userId): bool
     {
         $stmt = $this->db->prepare(

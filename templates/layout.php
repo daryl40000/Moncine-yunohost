@@ -77,6 +77,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     '/mon-compte.php',
                     '/mes-amis.php',
                     '/mes-groupes.php',
+                    '/utilisateur.php',
                     '/rechercher-utilisateurs.php',
                     '/import.php',
                     '/proposer-oeuvre.php',

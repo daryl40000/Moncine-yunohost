@@ -2946,3 +2946,133 @@ textarea {
     }
 
 }
+
+/* Profil public (amis / groupe) */
+.user-profile-link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.user-profile-link:hover {
+    text-decoration: underline;
+}
+
+.social-profile-header__ville {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+}
+
+.social-profile-stats__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1rem 1.5rem;
+    margin: 0;
+}
+
+.social-profile-stats__list > div {
+    margin: 0;
+}
+
+.social-profile-stats__list dt {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.social-profile-stats__list dd {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.social-profile-stats__list dd a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.social-profile-stats__list dd a:hover {
+    text-decoration: underline;
+}
+
+.social-profile-section {
+    margin-top: 2rem;
+}
+
+.social-poster-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+}
+
+.social-poster-strip__item {
+    width: 6.5rem;
+    flex: 0 0 auto;
+}
+
+.social-poster-strip__card {
+    margin: 0;
+}
+
+.social-poster-strip__poster {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.social-poster-strip__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 6px;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    font-size: 1.5rem;
+}
+
+.social-poster-strip__caption {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    line-height: 1.25;
+}
+
+.social-poster-strip__title {
+    display: block;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.social-poster-strip__year {
+    color: var(--muted);
+}
+
+.social-profile-list-sort {
+    margin: 0.75rem 0 1rem;
+}
+
+.social-profile-grid__card {
+    cursor: default;
+}
+
+.social-viewings-table__film {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 12rem;
+}
+
+.social-viewings-table__poster {
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    object-fit: cover;
+}

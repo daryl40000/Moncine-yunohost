@@ -10,6 +10,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 use Moncine\Auth;
 use Moncine\Csrf;
 use Moncine\Database;
+use Moncine\FamilyGroupService;
 use Moncine\FriendshipRepository;
 use Moncine\NotificationService;
 use Moncine\View;
@@ -79,12 +80,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && FriendshipRepository::isAvailable()
     }
 }
 
+$groupMembers = [];
+$groupName = '';
+$groupService = new FamilyGroupService();
+if (FamilyGroupService::isAvailable()) {
+    $group = $groupService->findGroupForUser($userId);
+    if ($group !== null) {
+        $groupName = (string) ($group['nom'] ?? '');
+        $foyerId = (int) ($group['id'] ?? 0);
+        foreach ($groupService->listMembers($foyerId) as $member) {
+            if ((int) ($member['id'] ?? 0) !== $userId) {
+                $groupMembers[] = $member;
+            }
+        }
+    }
+}
+
 View::render('mes_amis', [
     'pageTitle' => 'Mes amis',
     'friends' => FriendshipRepository::isAvailable() ? $friendRepo->listFriends($userId) : [],
     'pendingReceived' => FriendshipRepository::isAvailable() ? $friendRepo->listPendingReceived($userId) : [],
     'pendingSent' => FriendshipRepository::isAvailable() ? $friendRepo->listPendingSent($userId) : [],
     'blockedUsers' => FriendshipRepository::isAvailable() ? $friendRepo->listBlockedUsers($userId) : [],
+    'groupMembers' => $groupMembers,
+    'groupName' => $groupName,
     'socialAvailable' => FriendshipRepository::isAvailable(),
     'error' => $error,
     'success' => $success,

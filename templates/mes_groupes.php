@@ -86,10 +86,19 @@
 
             <h3>Membres</h3>
             <ul class="user-search-results">
-                <?php foreach ($members as $member): ?>
+                <?php foreach ($members as $member):
+                    $memberId = (int) ($member['id'] ?? 0);
+                    ?>
                     <li class="user-search-results__item">
                         <span class="user-search-results__name">
-                            <?= Moncine\View::escape(Moncine\UserProfile::displayName($member)) ?>
+                            <?php if ($memberId > 0): ?>
+                                <a href="<?= Moncine\View::escape(Moncine\View::userProfileUrl($memberId)) ?>"
+                                   class="user-profile-link">
+                                    <?= Moncine\View::escape(Moncine\UserProfile::displayName($member)) ?>
+                                </a>
+                            <?php else: ?>
+                                <?= Moncine\View::escape(Moncine\UserProfile::displayName($member)) ?>
+                            <?php endif; ?>
                         </span>
                         <span class="user-search-results__meta">
                             <?= (string) ($member['group_role'] ?? '') === 'founder' ? 'Fondateur' : 'Membre' ?>

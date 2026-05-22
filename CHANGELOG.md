@@ -7,6 +7,59 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.3] — 2026-05-19
+
+### Ajouté
+
+- **Profil public utilisateur** (`/utilisateur.php`) : visible par les **amis** et les **membres du même groupe** — pseudo, statistiques (collection, envies, films vus, films vus cette année), 5 derniers films vus et 5 derniers ajouts aux envies en **vignettes**.
+- Listes complètes en lecture seule : **collection**, **envies** et **films vus** (date et note par vision ; filtre par année depuis les statistiques).
+- Page **Mes amis** : section **membres du groupe** ; noms cliquables vers le profil (amis, demandes, groupe ; pas les comptes bloqués).
+- Page **Mon groupe famille** : noms des membres cliquables vers le profil.
+
+### Corrigé
+
+- Profil public : les **5 derniers films vus** n’affichent plus des titres sans vision réelle (jointure SQL `historique` ↔ `bibliotheque`).
+- Listes collection et envies sur le profil : affichage des films corrigé (`$films` / `$listFilms`).
+
+### Tests
+
+- `UserPublicProfileTest` (accès ami, membres du groupe, refus étranger, historique des visions).
+
+---
+
+## [0.8.2] — 2026-05-19
+
+### Ajouté
+
+- **Versions recherchées sur les envies** : table `wishlist_targets` (migration `024_wishlist_targets.sql`) — plusieurs combinaisons **support + EAN** par film en wishlist, distinctes de l’EAN catalogue et de l’exemplaire futur en collection.
+- Fiche film (envie) : panneau « Versions que je cherche », ajout manuel ou depuis les EAN catalogue de l’œuvre.
+- Liste **Mes envies** : colonne récapitulative des versions recherchées.
+
+### Tests
+
+- `WishlistTargetsTest` (ajouts multiples, promotion vers collection, import depuis EAN catalogue).
+
+### Prochaine évolution (roadmap)
+
+- Phase **7 bis** : affichage des versions sur le partage visiteur, comparateur de prix (support + EAN), pré-remplissage du support au « J’ai acheté ».
+
+---
+
+## [0.8.1] — 2026-05-19
+
+### Sécurité
+
+- **Partage visiteur** : limite anti brute-force par **adresse IP** (en plus de la session), quota de **10 liens actifs** par compte, en-têtes `X-Robots-Tag: noindex` et `Cache-Control: no-store` sur les pages `/partage.php` et `/partage-film.php`.
+- **En-têtes globaux** : `Content-Security-Policy` (scripts depuis `/assets/js/` uniquement ; styles inline autorisés pour les graphiques), **HSTS** envoyé uniquement en HTTPS (production).
+- **Recherche SQL** : échappement LIKE unifié via `LikePattern` dans tout le catalogue et les collections.
+- Script inline du catalogue déplacé vers `app.js` (compatible CSP `script-src 'self'`).
+
+### Tests
+
+- `ShareSecurityTest`, `LikePatternTest`, `SecurityHeadersTest`.
+
+---
+
 ## [0.8.0] — 2026-05-19
 
 ### Ajouté
