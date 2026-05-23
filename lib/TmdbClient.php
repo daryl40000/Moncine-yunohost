@@ -71,6 +71,7 @@ final class TmdbClient
             self::extractOriginalTitle($data, TmdbMediaType::MOVIE),
             TmdbCountries::nationaliteFromDetail($data),
             TmdbGenres::stylesFromDetail($data),
+            self::extractLocalizedTitle($data, TmdbMediaType::MOVIE),
         );
     }
 
@@ -108,6 +109,7 @@ final class TmdbClient
             self::extractOriginalTitle($data, TmdbMediaType::TV),
             TmdbCountries::nationaliteFromDetail($data),
             TmdbGenres::stylesFromDetail($data),
+            self::extractLocalizedTitle($data, TmdbMediaType::TV),
         );
     }
 
@@ -491,6 +493,7 @@ final class TmdbClient
             $originalTitle,
             $nationalite,
             TmdbGenres::stylesFromDetail($item),
+            self::extractLocalizedTitle($item, $type),
         );
     }
 
@@ -652,6 +655,18 @@ final class TmdbClient
     }
 
     /**
+     * Titre affiché TMDB en français (fr-FR) : title pour un film, name pour une série.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function extractLocalizedTitle(array $data, string $mediaType): string
+    {
+        $isTv = TmdbMediaType::normalize($mediaType) === TmdbMediaType::TV;
+
+        return trim((string) ($isTv ? ($data['name'] ?? '') : ($data['title'] ?? '')));
+    }
+
+    /**
      * Titre original TMDB s’il diffère du titre localisé (fr-FR).
      *
      * @param array<string, mixed> $data
@@ -683,7 +698,8 @@ final class TmdbClient
         string $tvKind = '',
         string $originalTitle = '',
         string $nationalite = '',
-        string $styles = ''
+        string $styles = '',
+        string $localizedTitle = ''
     ): array {
         $normalizedType = TmdbMediaType::normalize($mediaType) !== ''
             ? TmdbMediaType::normalize($mediaType)
@@ -698,6 +714,7 @@ final class TmdbClient
             'media_type' => $normalizedType,
             'tv_kind' => $normalizedKind,
             'original_title' => trim($originalTitle),
+            'localized_title' => trim($localizedTitle),
             'nationalite' => trim($nationalite),
             'overview' => $overview,
             'poster_url' => $posterUrl,

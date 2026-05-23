@@ -2516,11 +2516,96 @@ textarea {
     line-height: 1.15;
 }
 
+.stat-card__value--duration {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
 .stat-card__label {
     margin: 0.4rem 0 0;
     font-size: 0.82rem;
     color: var(--muted);
     line-height: 1.35;
+}
+
+.stat-card__label--with-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.info-tooltip {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.info-tooltip__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    font-style: italic;
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: help;
+    line-height: 1;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.info-tooltip:hover .info-tooltip__icon,
+.info-tooltip:focus-within .info-tooltip__icon {
+    color: var(--accent);
+    border-color: rgba(232, 185, 35, 0.5);
+}
+
+.info-tooltip__popup {
+    position: absolute;
+    bottom: calc(100% + 0.4rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max(14rem, 220px);
+    max-width: min(17.5rem, 88vw);
+    padding: 0.55rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 400;
+    font-style: normal;
+    font-family: var(--font);
+    line-height: 1.45;
+    text-align: left;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.info-tooltip__popup::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--border);
+}
+
+.info-tooltip:hover .info-tooltip__popup,
+.info-tooltip:focus-within .info-tooltip__popup {
+    opacity: 1;
+    visibility: visible;
 }
 
 .stat-card__hint {

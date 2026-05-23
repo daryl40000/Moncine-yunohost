@@ -230,7 +230,7 @@ final class FilmEnricher
             ];
         }
 
-        $this->films->updateOeuvreEnrichmentMetadata($oeuvreId, $this->metaFromTmdbRecord($tmdb), true);
+        $this->films->updateOeuvreEnrichmentMetadata($oeuvreId, $this->metaFromTmdbRecord($tmdb, true), true);
 
         $label = TmdbMediaType::label(
             (string) ($tmdb['media_type'] ?? TmdbMediaType::MOVIE),
@@ -284,7 +284,7 @@ final class FilmEnricher
             ];
         }
 
-        $this->films->updateEnrichmentMetadata($filmId, $this->metaFromTmdbRecord($tmdb), true);
+        $this->films->updateEnrichmentMetadata($filmId, $this->metaFromTmdbRecord($tmdb, true), true);
 
         $label = TmdbMediaType::label(
             (string) ($tmdb['media_type'] ?? TmdbMediaType::MOVIE),
@@ -416,9 +416,13 @@ final class FilmEnricher
      * } $tmdb
      * @return array<string, mixed>
      */
-    private function metaFromTmdbRecord(array $tmdb): array
+    /**
+     * @param array<string, mixed> $tmdb
+     * @return array<string, mixed>
+     */
+    private function metaFromTmdbRecord(array $tmdb, bool $applyLocalizedTitle = false): array
     {
-        return [
+        $meta = [
             'poster_url' => $tmdb['poster_url'],
             'synopsis' => $tmdb['overview'],
             'realisateur' => (string) ($tmdb['director'] ?? ''),
@@ -442,6 +446,15 @@ final class FilmEnricher
                 (string) ($tmdb['tv_kind'] ?? '')
             ),
         ];
+
+        if ($applyLocalizedTitle) {
+            $titre = trim((string) ($tmdb['localized_title'] ?? ''));
+            if ($titre !== '') {
+                $meta['titre'] = $titre;
+            }
+        }
+
+        return $meta;
     }
 
     /**

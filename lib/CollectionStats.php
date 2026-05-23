@@ -33,6 +33,7 @@ final class CollectionStats
         $filmsVusYear = $this->countDistinctFilmsSeenInYear($currentYear);
         $visionsTotal = $this->countViewings();
         $visionsYear = $this->countViewingsInYear($currentYear);
+        $viewingMinutesTotal = $this->totalViewingMinutes();
         $noteStats = $this->noteStatistics();
 
         return [
@@ -45,6 +46,8 @@ final class CollectionStats
             'films_jamais_vus' => max(0, $totalFilms - $filmsVusTotal),
             'visions_total' => $visionsTotal,
             'visions_year' => $visionsYear,
+            'viewing_minutes_total' => $viewingMinutesTotal,
+            'viewing_duration_label' => self::formatViewingDuration($viewingMinutesTotal),
             'percent_seen' => $totalFilms > 0
                 ? round(($filmsVusTotal / $totalFilms) * 100, 1)
                 : 0.0,
@@ -77,6 +80,55 @@ final class CollectionStats
         }
 
         return number_format($value, 1, ',', ' ') . ' %';
+    }
+
+    /**
+     * Durée cumulée des visions.
+     * Moins d’un jour : « 2h 30min » — un jour ou plus : « 3j 5h 30min ».
+     */
+    public static function formatViewingDuration(int $totalMinutes): string
+    {
+        if ($totalMinutes <= 0) {
+            return '0h 00min';
+        }
+
+        $days = intdiv($totalMinutes, 1440);
+        $remainder = $totalMinutes % 1440;
+        $hours = intdiv($remainder, 60);
+        $minutes = $remainder % 60;
+        $minutesLabel = str_pad((string) $minutes, 2, '0', STR_PAD_LEFT) . 'min';
+
+        if ($days < 1) {
+            return $hours . 'h ' . $minutesLabel;
+        }
+
+        return $days . 'j ' . $hours . 'h ' . $minutesLabel;
+    }
+
+    /**
+     * Minutes de vision cumulées : chaque entrée d’historique compte (re-visions incluses),
+     * durée prise sur la fiche film / œuvre (0 si durée inconnue).
+     */
+    private function totalViewingMinutes(): int
+    {
+        if (CatalogSchema::usesCatalogTables($this->db)) {
+            $stmt = $this->db->prepare(
+                'SELECT COALESCE(SUM(o.duree_min), 0)
+                 FROM historique h
+                 INNER JOIN bibliotheque b ON b.id = h.film_id
+                 INNER JOIN oeuvres o ON o.id = b.oeuvre_id
+                 WHERE h.user_id = ?'
+            );
+            $stmt->execute([$this->currentUserId()]);
+
+            return (int) $stmt->fetchColumn();
+        }
+
+        return (int) $this->db->query(
+            'SELECT COALESCE(SUM(f.duree_min), 0)
+             FROM historique h
+             INNER JOIN films f ON f.id = h.film_id'
+        )->fetchColumn();
     }
 
     private function countDistinctFilmsSeen(): int

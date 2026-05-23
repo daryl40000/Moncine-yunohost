@@ -33,7 +33,7 @@ define('MONCINE_INSTALL_SEED_DATA_DIR', MONCINE_DATA . '/install_seed');
 define('MONCINE_APP_NAME', 'Moncine');
 
 // Version applicative (semver)
-define('MONCINE_PACKAGE_VERSION', '0.8.3');
+define('MONCINE_PACKAGE_VERSION', '0.8.4');
 
 // Repère affiché sur la page import (vérifier que le serveur a bien le dernier code).
 define('MONCINE_IMPORT_ENGINE_BUILD', '2026-05-18-library-oeuvre-first');

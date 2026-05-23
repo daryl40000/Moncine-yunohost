@@ -1038,6 +1038,14 @@ final class CatalogFilmRepository
             $tmdbTvKind = '';
         }
 
+        $titre = trim((string) ($film['titre'] ?? ''));
+        if (array_key_exists('titre', $meta)) {
+            $newTitre = trim((string) ($meta['titre'] ?? ''));
+            if ($forceReplace && $newTitre !== '') {
+                $titre = $newTitre;
+            }
+        }
+
         $newTitreOriginal = trim((string) ($meta['titre_original'] ?? ''));
         if (array_key_exists('titre_original', $meta)) {
             if ($forceReplace || $newTitreOriginal !== '') {
@@ -1080,6 +1088,7 @@ final class CatalogFilmRepository
 
         $stmt = $this->db->prepare(
             'UPDATE oeuvres SET
+                titre = :titre,
                 poster_url = :poster_url,
                 synopsis = :synopsis,
                 realisateur = :realisateur,
@@ -1105,6 +1114,7 @@ final class CatalogFilmRepository
         );
         $stmt->execute([
             'oeuvre_id' => $oeuvreId,
+            'titre' => $titre,
             'poster_url' => $poster,
             'synopsis' => $synopsis,
             'realisateur' => $realisateur,

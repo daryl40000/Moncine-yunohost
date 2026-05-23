@@ -55,6 +55,23 @@ $totalFilms = (int) ($s['total_films'] ?? 0);
                 </p>
             <?php endif; ?>
         </article>
+        <?php if ($visionsTotal > 0): ?>
+            <article class="stat-card">
+                <p class="stat-card__value stat-card__value--duration">
+                    <?= Moncine\View::escape((string) ($s['viewing_duration_label'] ?? '0h 00min')) ?>
+                </p>
+                <p class="stat-card__label stat-card__label--with-info">
+                    Temps de vision cumulé
+                    <span class="info-tooltip" tabindex="0" aria-label="Comment est calculé le temps de vision cumulé">
+                        <span class="info-tooltip__icon" aria-hidden="true">i</span>
+                        <span class="info-tooltip__popup" role="tooltip">
+                            Depuis le début, toutes visions comptées (durée de chaque film × nombre de visionnages).
+                            Affichage jours, heures, minutes (ex. 2h 30min ou 3j 5h 30min).
+                        </span>
+                    </span>
+                </p>
+            </article>
+        <?php endif; ?>
         <article class="stat-card">
             <p class="stat-card__value"><?= $filmsVusYear ?></p>
             <p class="stat-card__label">Nouveaux films vus en <?= $currentYear ?></p>
