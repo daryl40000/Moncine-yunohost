@@ -37,7 +37,7 @@ Fonctionnalités métier visées :
 
 ## État actuel
 
-**Version applicative : 0.8.3**
+**Version applicative : 0.8.5**
 
 Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 
@@ -63,12 +63,14 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | **Partage visiteur (v0.8.0)** | Liens lecture seule collection / envies, pages publiques sécurisées |
 | **Cibles d’achat envies (v0.8.2)** | Table `wishlist_targets`, support + EAN multiples par envie, lien optionnel vers `oeuvre_eans` |
 | **Profil public (v0.8.3)** | `/utilisateur.php`, stats et vignettes pour amis / membres du groupe |
+| **Temps de vision cumulé (v0.8.4)** | Carte sur `/statistiques.php`, `CollectionStats::totalViewingMinutes()` |
+| **Sauvegarde base SQLite (v0.8.5)** | Export / restauration admin sur `/maintenance-catalogue.php` |
 | **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024` |
 | **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
 
 ### Point d’étape — mai 2026
 
-**Version actuelle : 0.8.3.** Profil public social livré. **Prochaine évolution : phase 7 bis** (suite cibles d’achat : partage, comparateur, « J’ai acheté »), puis **phase 8** (prêts).
+**Version actuelle : 0.8.5.** Sauvegarde admin de la base SQLite. **Prochaine évolution : phase 7 bis** (suite cibles d’achat : partage, comparateur, « J’ai acheté »), puis **phase 8** (prêts).
 
 | Version | Contenu principal |
 |---------|-------------------|
@@ -84,6 +86,8 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | 0.8.0 | EAN multiples catalogue + partage visiteur (liens lecture seule) |
 | 0.8.2 | Versions recherchées sur envies (support + EAN multiples) |
 | 0.8.3 | Profil public utilisateur (amis / groupe) |
+| 0.8.4 | Temps de vision cumulé (statistiques) + correction titre TMDB par ID |
+| 0.8.5 | Sauvegarde / restauration complète de la base SQLite (admin) |
 
 ### Prochaines étapes
 
@@ -959,11 +963,15 @@ Fonctionnalité transversale déjà partiellement en place :
 | EAN catalogue (v0.8.0) | `lib/OeuvreEanRepository.php`, `www/enregistrer-oeuvre-ean.php`, `023_oeuvre_eans.sql` |
 | Cibles d’achat envies (v0.8.2) | `lib/WishlistTargetRepository.php`, `www/enregistrer-wishlist-cible.php`, `024_wishlist_targets.sql` |
 | Profil public (v0.8.3) | `lib/UserPublicProfileService.php`, `www/utilisateur.php`, `templates/utilisateur.php` |
+| Temps de vision cumulé (v0.8.4) | `lib/CollectionStats.php`, `templates/statistiques.php` |
+| Sauvegarde base (v0.8.5) | `lib/DatabaseBackupService.php`, `www/admin-export-base.php`, `www/maintenance-catalogue.php` |
 
 ---
 
 ### Historique roadmap (récent)
 
+- 2026-05-19 — **Version 0.8.5** : **sauvegarde / restauration** de la base SQLite complète (admin, sécurisée).
+- 2026-05-19 — **Version 0.8.4** : **temps de vision cumulé** sur les statistiques ; correction **titre français TMDB** lors d’une correction par identifiant.
 - 2026-05-19 — **Version 0.8.3** : **profil public** (stats, vignettes, listes lecture seule) pour amis et membres du groupe.
 - 2026-05-19 — **Version 0.8.2** : saisie des **versions recherchées** sur les envies (`wishlist_targets`) ; **prochaine** : phase **7 bis** (partage, comparateur, « J’ai acheté »).
 - 2026-05-19 — **Version 0.8.0** : phases **6 bis** (EAN catalogue) et **7** (partage visiteur) livrées ; liste partagée avec affiches et modes Liste / Vignettes.
@@ -972,4 +980,4 @@ Fonctionnalité transversale déjà partiellement en place :
 
 ---
 
-*Dernière mise à jour : 19 mai 2026 — v0.8.3 livrée ; prochaine cible : **phase 7 bis** (suite cibles d’achat sur envies), puis **phase 8** (prêts).*
+*Dernière mise à jour : 19 mai 2026 — v0.8.5 livrée ; prochaine cible : **phase 7 bis** (suite cibles d’achat sur envies), puis **phase 8** (prêts).*

@@ -1595,6 +1595,54 @@ textarea {
     margin-top: 0;
 }
 
+.catalog-maintenance-panel--danger {
+    padding: 1.25rem;
+    border: 1px solid rgba(220, 80, 80, 0.45);
+    border-radius: var(--radius);
+    background: rgba(220, 80, 80, 0.06);
+}
+
+.catalog-maintenance-db-backup {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+@media (min-width: 720px) {
+    .catalog-maintenance-db-backup {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.catalog-maintenance-db-backup__block h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+}
+
+.catalog-maintenance-db-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    max-width: 28rem;
+}
+
+.catalog-maintenance-db-form label {
+    margin: 0;
+}
+
+.catalog-maintenance-db-confirm {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.catalog-maintenance-db-confirm input {
+    margin-top: 0.2rem;
+}
+
 .catalog-maintenance-duplicate {
     margin: 1rem 0;
     padding: 1rem;

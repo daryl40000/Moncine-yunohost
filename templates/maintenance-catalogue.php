@@ -8,6 +8,8 @@
  * @var list<array<string, mixed>> $auditLog
  * @var string $message
  * @var string $error
+ * @var bool $dbBackupSqliteOk
+ * @var int $dbBackupMaxMb
  */
 ?>
 <section class="catalog-maintenance-page">
@@ -204,6 +206,68 @@
                 Fusionner
             </button>
         </form>
+    </section>
+
+    <section class="catalog-maintenance-panel catalog-maintenance-panel--danger">
+        <h2>Sauvegarde et restauration de la base</h2>
+        <p class="hint">
+            Exporte ou remplace l’intégralité de <code>moncine.db</code> : catalogue, bibliothèques,
+            utilisateurs, historique, envies, groupes, etc. Les fichiers hors base
+            (clé TMDB, affiches dans <code>data/</code>) ne sont pas inclus.
+        </p>
+        <?php if (!$dbBackupSqliteOk): ?>
+            <p class="alert alert-warning">
+                L’extension PHP <strong>SQLite3</strong> est requise sur le serveur pour cette fonctionnalité.
+            </p>
+        <?php else: ?>
+            <div class="catalog-maintenance-db-backup">
+                <article class="catalog-maintenance-db-backup__block">
+                    <h3>Télécharger une sauvegarde</h3>
+                    <p class="hint">
+                        Fichier <strong>.db</strong> (SQLite). Réservé à l’administrateur connecté :
+                        mot de passe demandé, jeton anti-CSRF, limite de fréquence.
+                    </p>
+                    <form method="post" action="/admin-export-base.php" class="import-form catalog-maintenance-db-form">
+                        <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                        <label for="export_admin_password">Votre mot de passe administrateur</label>
+                        <input type="password" name="admin_password" id="export_admin_password"
+                               autocomplete="current-password" required minlength="8">
+                        <button type="submit" class="btn btn-secondary">Télécharger la base complète</button>
+                    </form>
+                </article>
+
+                <article class="catalog-maintenance-db-backup__block">
+                    <h3>Restaurer depuis une sauvegarde</h3>
+                    <p class="alert alert-warning">
+                        <strong>Danger :</strong> remplace toute la base actuelle. Conservez une copie avant.
+                        Une sauvegarde automatique de l’ancienne base est créée dans
+                        <code>data/db_snapshots/</code>.
+                    </p>
+                    <form method="post" enctype="multipart/form-data"
+                          class="import-form catalog-maintenance-db-form"
+                          onsubmit="return confirm('Remplacer TOUTE la base Moncine par ce fichier ? Cette action est irréversible sans votre sauvegarde.');">
+                        <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                        <input type="hidden" name="action" value="restore_database">
+                        <label for="backup_file">Fichier de sauvegarde (.db)</label>
+                        <input type="file" name="backup_file" id="backup_file" accept=".db,application/octet-stream"
+                               required>
+                        <p class="hint">Taille max. <?= (int) $dbBackupMaxMb ?> Mo.</p>
+                        <label for="restore_admin_password">Votre mot de passe administrateur</label>
+                        <input type="password" name="admin_password" id="restore_admin_password"
+                               autocomplete="current-password" required minlength="8">
+                        <label class="catalog-maintenance-db-confirm">
+                            <input type="checkbox" name="confirm_restore" value="1" required>
+                            Je comprends que toutes les données actuelles seront remplacées.
+                        </label>
+                        <label for="confirm_phrase">Saisir <strong>RESTAURER</strong> pour confirmer</label>
+                        <input type="text" name="confirm_phrase" id="confirm_phrase" required
+                               pattern="RESTAURER" autocomplete="off" spellcheck="false"
+                               title="Saisissez RESTAURER en majuscules">
+                        <button type="submit" class="btn btn-danger">Restaurer la base</button>
+                    </form>
+                </article>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="catalog-maintenance-panel">

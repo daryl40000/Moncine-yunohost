@@ -14,6 +14,8 @@ final class CatalogAuditLog
     public const ACTION_DELETE = 'delete_oeuvre';
     public const ACTION_MERGE = 'merge_oeuvres';
     public const ACTION_PURGE_POSTERS = 'purge_orphan_posters';
+    public const ACTION_DB_EXPORT = 'export_database';
+    public const ACTION_DB_RESTORE = 'restore_database';
 
     private PDO $db;
 
@@ -78,6 +80,8 @@ final class CatalogAuditLog
             self::ACTION_DELETE => 'Suppression',
             self::ACTION_MERGE => 'Fusion de doublons',
             self::ACTION_PURGE_POSTERS => 'Nettoyage affiches',
+            self::ACTION_DB_EXPORT => 'Export base SQLite',
+            self::ACTION_DB_RESTORE => 'Restauration base SQLite',
             default => $action,
         };
     }

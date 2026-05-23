@@ -7,6 +7,43 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.5] — 2026-05-19
+
+### Ajouté
+
+- **Maintenance catalogue** : sauvegarde et restauration de la base SQLite complète (`moncine.db`) — catalogue, bibliothèques, utilisateurs, historique, envies, groupes, etc.
+- **Export** : téléchargement d’un fichier `.db` via `/admin-export-base.php` (POST, mot de passe admin, CSRF, limite de fréquence).
+- **Restauration** : remplacement de la base avec validation du fichier, confirmation **RESTAURER**, copie de secours automatique dans `data/db_snapshots/`.
+- Journal admin : actions **export** et **restauration** de la base.
+
+### Sécurité
+
+- Accès **administrateur** uniquement ; **mot de passe** redemandé à chaque opération ; protection **CSRF** ; quotas session + IP (exports/restaurations et échecs de mot de passe) ; fichiers temporaires hors répertoire web.
+
+### Tests
+
+- `DatabaseBackupServiceTest`, `DatabaseBackupRestoreTest`.
+
+---
+
+## [0.8.4] — 2026-05-19
+
+### Ajouté
+
+- **Statistiques** : carte **temps de vision cumulé** depuis le début (durée de chaque film × nombre de visionnages, re-visions incluses) — affichage **2h 30min** sous un jour, **3j 5h 30min** au-delà.
+- **Infobulle** sur le libellé de cette carte (icône **i** au survol) : explication du calcul et du format, sans texte permanent sous la carte.
+
+### Corrigé
+
+- **Correction TMDB par identifiant** : le **titre français** (fr-FR) de la fiche œuvre est mis à jour ; l’**enrichissement par titre** ne modifie pas le titre saisi.
+
+### Tests
+
+- `CollectionStatsDurationTest`, `CollectionStatsViewingDurationTest`.
+- `FilmEnricherTmdbTitleTest`.
+
+---
+
 ## [0.8.3] — 2026-05-19
 
 ### Ajouté
