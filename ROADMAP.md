@@ -37,7 +37,7 @@ Fonctionnalités métier visées :
 
 ## État actuel
 
-**Version applicative : 0.8.5**
+**Version applicative : 0.8.6**
 
 Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 
@@ -65,12 +65,13 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | **Profil public (v0.8.3)** | `/utilisateur.php`, stats et vignettes pour amis / membres du groupe |
 | **Temps de vision cumulé (v0.8.4)** | Carte sur `/statistiques.php`, `CollectionStats::totalViewingMinutes()` |
 | **Sauvegarde base SQLite (v0.8.5)** | Export / restauration admin sur `/maintenance-catalogue.php` |
+| **UX accueil & partage (v0.8.6)** | Vignettes accueil, bouton profil, partage lien e-mail / Bluesky |
 | **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024` |
 | **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
 
 ### Point d’étape — mai 2026
 
-**Version actuelle : 0.8.5.** Sauvegarde admin de la base SQLite. **Prochaine évolution : phase 7 bis** (suite cibles d’achat : partage, comparateur, « J’ai acheté »), puis **phase 8** (prêts).
+**Version actuelle : 0.8.6.** Accueil enrichi et partage des liens visiteur. **Prochaine évolution : phase 7 bis** (suite cibles d’achat : partage, comparateur, « J’ai acheté »), puis **phase 8** (prêts).
 
 | Version | Contenu principal |
 |---------|-------------------|
@@ -88,6 +89,7 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | 0.8.3 | Profil public utilisateur (amis / groupe) |
 | 0.8.4 | Temps de vision cumulé (statistiques) + correction titre TMDB par ID |
 | 0.8.5 | Sauvegarde / restauration complète de la base SQLite (admin) |
+| 0.8.6 | Accueil vignettes, profil en un clic, partage lien e-mail / Bluesky |
 
 ### Prochaines étapes
 
@@ -965,11 +967,13 @@ Fonctionnalité transversale déjà partiellement en place :
 | Profil public (v0.8.3) | `lib/UserPublicProfileService.php`, `www/utilisateur.php`, `templates/utilisateur.php` |
 | Temps de vision cumulé (v0.8.4) | `lib/CollectionStats.php`, `templates/statistiques.php` |
 | Sauvegarde base (v0.8.5) | `lib/DatabaseBackupService.php`, `www/admin-export-base.php`, `www/maintenance-catalogue.php` |
+| Partage & accueil (v0.8.6) | `lib/ShareLinkShare.php`, `templates/home.php`, `templates/layout.php` |
 
 ---
 
 ### Historique roadmap (récent)
 
+- 2026-05-19 — **Version 0.8.6** : **accueil** (vignettes), **bouton profil**, **partage** des liens par e-mail et Bluesky.
 - 2026-05-19 — **Version 0.8.5** : **sauvegarde / restauration** de la base SQLite complète (admin, sécurisée).
 - 2026-05-19 — **Version 0.8.4** : **temps de vision cumulé** sur les statistiques ; correction **titre français TMDB** lors d’une correction par identifiant.
 - 2026-05-19 — **Version 0.8.3** : **profil public** (stats, vignettes, listes lecture seule) pour amis et membres du groupe.
@@ -980,4 +984,4 @@ Fonctionnalité transversale déjà partiellement en place :
 
 ---
 
-*Dernière mise à jour : 19 mai 2026 — v0.8.5 livrée ; prochaine cible : **phase 7 bis** (suite cibles d’achat sur envies), puis **phase 8** (prêts).*
+*Dernière mise à jour : 19 mai 2026 — v0.8.6 livrée ; prochaine cible : **phase 7 bis** (suite cibles d’achat sur envies), puis **phase 8** (prêts).*

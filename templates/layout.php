@@ -9,10 +9,12 @@ $canProposeToCatalog = $submissionsAvailable && !$isAdminCatalog;
 $pendingSubmissions = $isAdminCatalog && $submissionsAvailable
     ? (new Moncine\CatalogSubmission())->countPending()
     : 0;
-$notificationsAvailable = NotificationService::isAvailable() && Auth::currentUserId() > 0;
+$currentUserId = Auth::currentUserId();
+$notificationsAvailable = NotificationService::isAvailable() && $currentUserId > 0;
 $unreadNotifications = $notificationsAvailable
-    ? (new NotificationService())->countUnread(Auth::currentUserId())
+    ? (new NotificationService())->countUnread($currentUserId)
     : 0;
+$profileUrl = $currentUserId > 0 ? Moncine\View::userProfileUrl($currentUserId) : '';
 $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 ?>
 <!DOCTYPE html>
@@ -37,6 +39,21 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                          alt="<?= Moncine\View::escape(MONCINE_APP_NAME) ?>"
                          width="56" height="56" decoding="async">
                 </a>
+                <?php if ($profileUrl !== ''): ?>
+                    <?php
+                    $profileLabel = 'Mon profil';
+                    $profileCurrent = $currentPath === '/utilisateur.php'
+                        && (int) ($_GET['id'] ?? 0) === $currentUserId;
+                    ?>
+                    <a href="<?= Moncine\View::escape($profileUrl) ?>"
+                       class="header-profile<?= $profileCurrent ? ' header-profile--current' : '' ?>"
+                       aria-label="<?= Moncine\View::escape($profileLabel) ?>"
+                       title="<?= Moncine\View::escape($profileLabel) ?>">
+                        <svg class="header-profile__icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2.25c-4.28 0-7.75 2.47-7.75 5.5V21h15.5v-1.25c0-3.03-3.47-5.5-7.75-5.5Z"/>
+                        </svg>
+                    </a>
+                <?php endif; ?>
                 <?php if ($notificationsAvailable): ?>
                     <?php
                     $notifLabel = 'Notifications';

@@ -5,6 +5,7 @@
  * @var bool $isSelf
  * @var array<string, int> $stats
  * @var list<array<string, mixed>> $lastViewed
+ * @var list<array<string, mixed>> $lastCollection
  * @var list<array<string, mixed>> $lastWishlist
  * @var list<array<string, mixed>> $listFilms
  * @var list<array<string, mixed>> $listViewings
@@ -131,6 +132,17 @@
             require MONCINE_ROOT . '/templates/_user_profile_poster_strip.php';
             ?>
         </section>
+
+        <?php if ($isSelf || (int) ($stats['collection_count'] ?? 0) > 0): ?>
+            <section class="social-profile-section" aria-labelledby="social-last-collection-heading">
+                <h2 id="social-last-collection-heading">5 derniers ajouts à la collection</h2>
+                <?php
+                $films = $lastCollection ?? [];
+                $emptyHint = 'Aucun film dans la collection pour le moment.';
+                require MONCINE_ROOT . '/templates/_user_profile_poster_strip.php';
+                ?>
+            </section>
+        <?php endif; ?>
 
         <section class="social-profile-section" aria-labelledby="social-last-wishlist-heading">
             <h2 id="social-last-wishlist-heading">5 derniers ajouts aux envies</h2>

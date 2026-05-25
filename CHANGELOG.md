@@ -7,6 +7,21 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.6] — 2026-05-19
+
+### Ajouté
+
+- **En-tête** : bouton **Mon profil** (icône utilisateur) à côté des notifications — ouvre votre profil public.
+- **Page d’accueil** : **activité récente** sur **3 lignes** (comme le profil) — bandeaux horizontaux de vignettes : 5 derniers films vus, 5 derniers ajouts à la collection, 5 derniers ajouts aux envies (liens vers les fiches).
+- **Profil public** : section « 5 derniers ajouts à la collection » (votre profil et celui des amis / groupe).
+- **Liens de partage** : après création d’un lien, partage par **e-mail** (messagerie locale ou envoi serveur) et par **Bluesky** (intent) ; copie de l’URL ; URL mémorisée 24 h en session pour les liens récents.
+
+### Tests
+
+- `ShareLinkShareTest`, `ShareLinkSessionStoreTest`, `UserPublicProfileCollectionTest`.
+
+---
+
 ## [0.8.5] — 2026-05-19
 
 ### Ajouté

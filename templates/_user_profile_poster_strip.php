@@ -4,9 +4,11 @@
  *
  * @var list<array<string, mixed>> $films
  * @var string $emptyHint
+ * @var bool $linkToFilm Lien vers la fiche film (/film.php)
  */
 $films = $films ?? [];
 $emptyHint = $emptyHint ?? 'Aucun film à afficher.';
+$linkToFilm = !empty($linkToFilm);
 ?>
 <?php if ($films === []): ?>
     <p class="hint"><?= Moncine\View::escape($emptyHint) ?></p>
@@ -18,6 +20,13 @@ $emptyHint = $emptyHint ?? 'Aucun film à afficher.';
             $annee = (int) ($film['annee'] ?? 0);
             ?>
             <li class="social-poster-strip__item" role="listitem">
+                <?php
+                $filmId = (int) ($film['id'] ?? 0);
+                $filmHref = $linkToFilm && $filmId > 0 ? '/film.php?id=' . $filmId : '';
+                ?>
+                <?php if ($filmHref !== ''): ?>
+                    <a href="<?= Moncine\View::escape($filmHref) ?>" class="social-poster-strip__link">
+                <?php endif; ?>
                 <figure class="social-poster-strip__card">
                     <?php if ($posterSrc !== ''): ?>
                         <img class="social-poster-strip__poster" src="<?= $posterSrc ?>"
@@ -32,6 +41,9 @@ $emptyHint = $emptyHint ?? 'Aucun film à afficher.';
                         <?php endif; ?>
                     </figcaption>
                 </figure>
+                <?php if ($filmHref !== ''): ?>
+                    </a>
+                <?php endif; ?>
             </li>
         <?php endforeach; ?>
     </ul>

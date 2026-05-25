@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCollectionBulkSelection();
     initContentKindFields();
     initCatalogTitleAutocomplete();
+    initShareLinkCopy();
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('vu') === '1') {
@@ -493,5 +494,37 @@ function initContentKindFields() {
         };
         select.addEventListener('change', sync);
         sync();
+    });
+}
+
+/** Copie l’URL d’un lien de partage dans le presse-papiers. */
+function initShareLinkCopy() {
+    document.querySelectorAll('.share-delivery__copy').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const targetId = btn.getAttribute('data-copy-target');
+            if (!targetId) {
+                return;
+            }
+            const input = document.getElementById(targetId);
+            if (!input || !(input instanceof HTMLInputElement)) {
+                return;
+            }
+            const url = input.value;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    input.select();
+                    document.execCommand('copy');
+                }
+                const label = btn.textContent;
+                btn.textContent = 'Copié !';
+                window.setTimeout(() => {
+                    btn.textContent = label || 'Copier';
+                }, 2000);
+            } catch {
+                input.select();
+            }
+        });
     });
 }

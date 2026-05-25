@@ -248,6 +248,30 @@ a.support-link:hover,
     flex-shrink: 0;
 }
 
+.header-profile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border-radius: 8px;
+    color: var(--muted);
+    text-decoration: none;
+    line-height: 0;
+}
+
+.header-profile:hover,
+.header-profile:focus-visible,
+.header-profile--current {
+    color: var(--accent);
+    background: rgba(232, 185, 35, 0.12);
+}
+
+.header-profile__icon {
+    display: block;
+}
+
 .header-notifications {
     position: relative;
     display: inline-flex;
@@ -3186,6 +3210,87 @@ textarea {
 
 .social-poster-strip__year {
     color: var(--muted);
+}
+
+.social-poster-strip__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.social-poster-strip__link:hover .social-poster-strip__poster,
+.social-poster-strip__link:focus-visible .social-poster-strip__poster {
+    border-color: rgba(232, 185, 35, 0.55);
+    box-shadow: 0 0 0 2px rgba(232, 185, 35, 0.2);
+}
+
+.home-dashboard {
+    margin: 2.5rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.home-dashboard__title {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+}
+
+.home-dashboard .social-profile-section h2 {
+    margin-top: 0;
+    font-size: 1rem;
+}
+
+.home-dashboard__more {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+}
+
+.share-manage__new-link h2 {
+    margin-top: 0;
+    font-size: 1.05rem;
+}
+
+.share-delivery {
+    margin-top: 0.75rem;
+}
+
+.share-delivery__url {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0 0 0.75rem;
+}
+
+.share-delivery__input {
+    flex: 1 1 12rem;
+    min-width: 0;
+    font-size: 0.82rem;
+}
+
+.share-delivery__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.share-delivery__email-form {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border);
+}
+
+.share-link-list__delivery {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.share-link-list__no-url {
+    margin: 0.5rem 0;
 }
 
 .social-profile-list-sort {

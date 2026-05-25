@@ -1,3 +1,14 @@
+<?php
+/**
+ * @var int $filmCount
+ * @var bool $setupDone
+ * @var list<array<string, mixed>> $lastViewed
+ * @var list<array<string, mixed>> $lastCollection
+ * @var list<array<string, mixed>> $lastWishlist
+ * @var string $profileUrl
+ * @var int $currentUserId
+ */
+?>
 <section class="hero">
     <?php if (!empty($setupDone)): ?>
         <p class="alert alert-success">Compte administrateur créé. Vous êtes connecté.</p>
@@ -21,6 +32,54 @@
             <a class="btn btn-secondary" href="<?= Moncine\View::escape(Moncine\View::addFilmChoiceUrl()) ?>">Ajouter film</a>
             <a class="btn btn-secondary" href="/films.php">Voir mes films</a>
             <a class="btn btn-secondary" href="/statistiques.php">Statistiques</a>
+            <?php if ($profileUrl !== ''): ?>
+                <a class="btn btn-secondary" href="<?= Moncine\View::escape($profileUrl) ?>">Mon profil</a>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </section>
+
+<?php if ((int) $filmCount > 0): ?>
+    <section class="home-dashboard" aria-labelledby="home-dashboard-heading">
+        <h2 id="home-dashboard-heading" class="home-dashboard__title">Votre activité récente</h2>
+
+        <section class="social-profile-section" aria-labelledby="home-last-viewed-heading">
+            <h2 id="home-last-viewed-heading">5 derniers films vus</h2>
+                <?php
+                $films = $lastViewed;
+                $emptyHint = 'Aucune vision enregistrée pour le moment.';
+                $linkToFilm = true;
+                require MONCINE_ROOT . '/templates/_user_profile_poster_strip.php';
+                ?>
+                <?php if ($currentUserId > 0 && $lastViewed !== []): ?>
+                    <p class="home-dashboard__more">
+                        <a href="<?= Moncine\View::escape(Moncine\View::userProfileListUrl($currentUserId, 'vus')) ?>">
+                            Voir tout l’historique
+                        </a>
+                    </p>
+                <?php endif; ?>
+        </section>
+
+        <section class="social-profile-section" aria-labelledby="home-last-collection-heading">
+            <h2 id="home-last-collection-heading">5 derniers ajouts à la collection</h2>
+                <?php
+                $films = $lastCollection;
+                $emptyHint = 'Aucun film dans la collection pour le moment.';
+                $linkToFilm = true;
+                require MONCINE_ROOT . '/templates/_user_profile_poster_strip.php';
+                ?>
+            <p class="home-dashboard__more"><a href="/films.php">Voir mes films</a></p>
+        </section>
+
+        <section class="social-profile-section" aria-labelledby="home-last-wishlist-heading">
+            <h2 id="home-last-wishlist-heading">5 derniers ajouts aux envies</h2>
+                <?php
+                $films = $lastWishlist;
+                $emptyHint = 'Aucun film dans les envies pour le moment.';
+                $linkToFilm = true;
+                require MONCINE_ROOT . '/templates/_user_profile_poster_strip.php';
+                ?>
+            <p class="home-dashboard__more"><a href="/souhaits.php">Voir mes envies</a></p>
+        </section>
+    </section>
+<?php endif; ?>

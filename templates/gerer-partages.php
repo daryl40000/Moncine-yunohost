@@ -14,11 +14,17 @@
     <?php if (!empty($flashError)): ?>
         <p class="alert alert-warning"><?= Moncine\View::escape($flashError) ?></p>
     <?php endif; ?>
-    <?php if (!empty($newShareUrl)): ?>
-        <p class="alert alert-success">
-            URL du lien :
-            <a href="<?= Moncine\View::escape($newShareUrl) ?>"><?= Moncine\View::escape($newShareUrl) ?></a>
-        </p>
+
+    <?php if (!empty($newShareAbsoluteUrl)): ?>
+        <section class="share-manage__new-link alert alert-info">
+            <h2>Nouveau lien — partager</h2>
+            <?php
+            $shareUrl = $newShareAbsoluteUrl;
+            $scopeLabel = $newShareScopeLabel ?? 'Liste partagée';
+            $linkId = (int) ($newShareLinkId ?? 0);
+            require MONCINE_ROOT . '/templates/_share_link_share_panel.php';
+            ?>
+        </section>
     <?php endif; ?>
 
     <section class="share-manage__create">
@@ -49,7 +55,7 @@
         <p class="hint">
             Chaque lien expire au bout de 90 jours. Maximum
             <?= (int) Moncine\ShareLinkService::MAX_ACTIVE_LINKS_PER_USER ?> liens actifs par compte.
-            L’URL complète n’est affichée qu’une fois à la création.
+            L’URL complète est mémorisée 24 h dans votre session pour l’e-mail et Bluesky.
         </p>
     </section>
 
@@ -61,11 +67,14 @@
             <ul class="share-link-list">
                 <?php foreach ($links as $link): ?>
                     <?php
+                    $linkId = (int) ($link['id'] ?? 0);
                     $scope = Moncine\ShareLinkScope::normalize((string) ($link['scope'] ?? ''));
+                    $scopeLabel = Moncine\ShareLinkScope::label($scope);
                     $expires = (string) ($link['expires_at'] ?? '');
+                    $shareUrl = $shareUrlByLinkId[$linkId] ?? '';
                     ?>
                     <li class="share-link-list__item">
-                        <strong><?= Moncine\View::escape(Moncine\ShareLinkScope::label($scope)) ?></strong>
+                        <strong><?= Moncine\View::escape($scopeLabel) ?></strong>
                         <?php if (trim((string) ($link['label'] ?? '')) !== ''): ?>
                             — <?= Moncine\View::escape((string) $link['label']) ?>
                         <?php endif; ?>
@@ -76,10 +85,24 @@
                             <?php endif; ?>
                             — <?= (int) ($link['access_count'] ?? 0) ?> consultation<?= (int) ($link['access_count'] ?? 0) > 1 ? 's' : '' ?>
                         </span>
+
+                        <?php if ($shareUrl !== ''): ?>
+                            <div class="share-link-list__delivery">
+                                <?php
+                                require MONCINE_ROOT . '/templates/_share_link_share_panel.php';
+                                ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="hint share-link-list__no-url">
+                                Pour partager ce lien par e-mail ou Bluesky, recréez un lien du même type
+                                (l’URL n’est affichée qu’à la création).
+                            </p>
+                        <?php endif; ?>
+
                         <form method="post" action="/gerer-partages.php" class="inline-form">
                             <?= Moncine\View::csrfField() ?>
                             <input type="hidden" name="action" value="revoke">
-                            <input type="hidden" name="link_id" value="<?= (int) ($link['id'] ?? 0) ?>">
+                            <input type="hidden" name="link_id" value="<?= $linkId ?>">
                             <button type="submit" class="btn btn-secondary btn--small">Révoquer</button>
                         </form>
                     </li>

@@ -153,6 +153,27 @@ final class UserPublicProfileService
     }
 
     /** @return list<array<string, mixed>> */
+    public function lastCollectionFilms(int $userId, int $limit = 5): array
+    {
+        $foyerId = $this->foyerIdForUser($userId);
+        if ($foyerId <= 0 || $limit <= 0) {
+            return [];
+        }
+
+        [$userWhere, $params] = CatalogSchema::libraryFilter($foyerId, $userId, LibraryStatut::COLLECTION);
+        $stmt = $this->db->prepare(
+            'SELECT ' . CatalogSchema::selectFilmRow() . '
+             FROM ' . CatalogSchema::JOIN . '
+             WHERE ' . $userWhere . '
+             ORDER BY b.created_at DESC, b.id DESC
+             LIMIT ' . (int) $limit
+        );
+        $stmt->execute($params);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return list<array<string, mixed>> */
     public function lastWishlistFilms(int $userId, int $limit = 5): array
     {
         if ($userId <= 0 || $limit <= 0) {
