@@ -33,4 +33,14 @@ final class LibraryStatut
             default => 'Mes films',
         };
     }
+
+    /** Libellé pour la recherche par personne (présence dans la bibliothèque). */
+    public static function presenceLabel(string $presence): string
+    {
+        return match ($presence) {
+            self::COLLECTION => 'Dans ma collection',
+            self::WISHLIST => 'Dans mes envies',
+            default => 'Pas dans ma liste',
+        };
+    }
 }

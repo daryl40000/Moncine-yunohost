@@ -236,6 +236,24 @@ final class View
     }
 
     /**
+     * Lien depuis la recherche par personne : fiche film si déjà en bibliothèque, sinon ajout depuis le catalogue.
+     *
+     * @param array<string, mixed> $film
+     */
+    public static function personSearchFilmUrl(array $film): string
+    {
+        $presence = (string) ($film['library_presence'] ?? 'none');
+        $bibId = (int) ($film['id'] ?? 0);
+        if ($bibId > 0 && $presence !== 'none') {
+            return '/film.php?id=' . $bibId;
+        }
+
+        $oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
+
+        return self::addFilmChoiceUrl($oeuvreId);
+    }
+
+    /**
      * URL ouverte au clic sur une notification (marque lue puis redirige).
      */
     public static function notificationOpenUrl(array $note): string

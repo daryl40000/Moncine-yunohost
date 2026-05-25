@@ -1166,6 +1166,9 @@ final class CatalogFilmRepository
     }
 
     /**
+     * Films du catalogue partagé où la personne apparaît (réalisateur ou acteur),
+     * avec indication collection / envies / absent de la bibliothèque.
+     *
      * @return list<array<string, mixed>>
      */
     public function findByPersonne(string $query): array
@@ -1190,8 +1193,10 @@ final class CatalogFilmRepository
             'like2' => $like,
             'like3' => $like,
             'like4' => $like,
-            'catalog_foyer_id' => $this->foyerId(),
-            'catalog_statut' => LibraryStatut::COLLECTION,
+            'foyer_id' => $this->foyerId(),
+            'collection' => LibraryStatut::COLLECTION,
+            'wishlist' => LibraryStatut::WISHLIST,
+            'user_id' => $this->userId(),
             'history_user_id' => $this->userId(),
         ];
 
@@ -1210,10 +1215,15 @@ final class CatalogFilmRepository
         }
 
         $stmt = $this->db->prepare(
-            'SELECT ' . CatalogSchema::selectFilmRow() . ',
-                (SELECT MAX(h.date_vue) FROM historique h WHERE h.film_id = b.id AND h.user_id = :history_user_id) AS derniere_vue
-             FROM ' . CatalogSchema::JOIN . '
-             WHERE b.foyer_id = :catalog_foyer_id AND b.statut = :catalog_statut AND (' . $where . ')
+            'SELECT ' . $this->selectPersonSearchRow() . ',
+                (SELECT MAX(h.date_vue) FROM historique h
+                 WHERE h.film_id = b_coll.id AND h.user_id = :history_user_id) AS derniere_vue
+             FROM oeuvres o
+             LEFT JOIN bibliotheque b_coll ON b_coll.oeuvre_id = o.id
+                 AND b_coll.foyer_id = :foyer_id AND b_coll.statut = :collection
+             LEFT JOIN bibliotheque b_wish ON b_wish.oeuvre_id = o.id
+                 AND b_wish.user_id = :user_id AND b_wish.statut = :wishlist
+             WHERE (' . $where . ')
              ORDER BY o.titre COLLATE FRENCH_NOCASE'
         );
         $stmt->execute($params);
@@ -1225,30 +1235,13 @@ final class CatalogFilmRepository
     public function distinctPersonnes(int $limit = 300): array
     {
         $limit = max(1, min(500, $limit));
-        $foyerId = $this->foyerId();
-        $statut = LibraryStatut::COLLECTION;
         $sql = 'SELECT DISTINCT name FROM (
-                SELECT o.realisateur AS name FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.foyer_id = :f1 AND b.statut = :s1 AND TRIM(o.realisateur) != ""
-                UNION SELECT o.acteur_1 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.foyer_id = :f2 AND b.statut = :s2 AND TRIM(o.acteur_1) != ""
-                UNION SELECT o.acteur_2 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.foyer_id = :f3 AND b.statut = :s3 AND TRIM(o.acteur_2) != ""
-                UNION SELECT o.acteur_3 FROM ' . CatalogSchema::JOIN . '
-                    WHERE b.foyer_id = :f4 AND b.statut = :s4 AND TRIM(o.acteur_3) != ""
+                SELECT realisateur AS name FROM oeuvres WHERE TRIM(realisateur) != ""
+                UNION SELECT acteur_1 FROM oeuvres WHERE TRIM(acteur_1) != ""
+                UNION SELECT acteur_2 FROM oeuvres WHERE TRIM(acteur_2) != ""
+                UNION SELECT acteur_3 FROM oeuvres WHERE TRIM(acteur_3) != ""
             ) ORDER BY name COLLATE FRENCH_NOCASE LIMIT ' . $limit;
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            'f1' => $foyerId,
-            's1' => $statut,
-            'f2' => $foyerId,
-            's2' => $statut,
-            'f3' => $foyerId,
-            's3' => $statut,
-            'f4' => $foyerId,
-            's4' => $statut,
-        ]);
-        $rows = $stmt->fetchAll();
+        $rows = $this->db->query($sql)->fetchAll();
         $out = [];
         foreach ($rows as $row) {
             $n = trim((string) ($row['name'] ?? ''));
@@ -1258,6 +1251,29 @@ final class CatalogFilmRepository
         }
 
         return $out;
+    }
+
+    private function selectPersonSearchRow(): string
+    {
+        $parts = [
+            'o.id AS oeuvre_id',
+            'COALESCE(b_coll.id, b_wish.id, 0) AS id',
+            'COALESCE(b_coll.user_id, b_wish.user_id, 0) AS user_id',
+            'COALESCE(b_coll.foyer_id, b_wish.foyer_id, 0) AS foyer_id',
+            'COALESCE(b_coll.statut, b_wish.statut, \'\') AS statut',
+            'CASE WHEN b_coll.id IS NOT NULL THEN \'collection\'
+                  WHEN b_wish.id IS NOT NULL THEN \'wishlist\'
+                  ELSE \'none\' END AS library_presence',
+        ];
+        foreach (CatalogSchema::LIBRARY_FIELDS as $field) {
+            $parts[] = 'COALESCE(b_coll.' . $field . ', b_wish.' . $field . ', \'\') AS ' . $field;
+        }
+        foreach (CatalogSchema::OEUVRE_FIELDS as $field) {
+            $parts[] = 'o.' . $field;
+        }
+        $parts[] = 'COALESCE(b_coll.created_at, b_wish.created_at, \'\') AS created_at';
+
+        return implode(', ', $parts);
     }
 
     /**

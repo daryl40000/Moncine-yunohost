@@ -2193,6 +2193,24 @@ a.saga-link:hover {
     padding: 0 0.85rem 0.85rem;
 }
 
+.tag--presence-collection {
+    background: rgba(80, 180, 120, 0.2);
+    border-color: rgba(80, 180, 120, 0.45);
+    color: #8fd4a8;
+}
+
+.tag--presence-wishlist {
+    background: rgba(100, 160, 220, 0.2);
+    border-color: rgba(100, 160, 220, 0.45);
+    color: #9ec8ef;
+}
+
+.tag--presence-none {
+    background: rgba(140, 140, 140, 0.15);
+    border-color: var(--border);
+    color: var(--muted);
+}
+
 .personnes-results .tag--role {
     white-space: nowrap;
 }

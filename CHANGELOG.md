@@ -7,6 +7,22 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.7] — 2026-05-19
+
+### Ajouté
+
+- **Recherche par acteur / réalisateur** (`/personnes.php`) : résultats sur **tout le catalogue partagé**, avec badge **Dans ma collection**, **Dans mes envies** ou **Pas dans ma liste** ; suggestions de noms issues du catalogue entier.
+
+### Amélioré
+
+- **Page d’accueil** : retrait des boutons redondants avec le menu (Voir mes films, Statistiques, Mon profil) — conservent Lancer le questionnaire et Ajouter film.
+
+### Tests
+
+- `PersonSearchTest`.
+
+---
+
 ## [0.8.6] — 2026-05-19
 
 ### Ajouté

@@ -30,11 +30,6 @@
         <div class="hero-actions">
             <a class="btn btn-primary btn-lg" href="/quiz.php">Lancer le questionnaire</a>
             <a class="btn btn-secondary" href="<?= Moncine\View::escape(Moncine\View::addFilmChoiceUrl()) ?>">Ajouter film</a>
-            <a class="btn btn-secondary" href="/films.php">Voir mes films</a>
-            <a class="btn btn-secondary" href="/statistiques.php">Statistiques</a>
-            <?php if ($profileUrl !== ''): ?>
-                <a class="btn btn-secondary" href="<?= Moncine\View::escape($profileUrl) ?>">Mon profil</a>
-            <?php endif; ?>
         </div>
     <?php endif; ?>
 </section>
