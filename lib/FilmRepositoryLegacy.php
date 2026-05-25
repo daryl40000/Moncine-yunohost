@@ -1227,7 +1227,7 @@ final class FilmRepositoryLegacy
             'moncine_kind' => MoncineContentKind::normalize((string) ($data['moncine_kind'] ?? '')),
             'saison_numero' => max(0, (int) ($data['saison_numero'] ?? 0)),
             'saison_label' => trim((string) ($data['saison_label'] ?? '')),
-            'ean' => trim((string) ($data['ean'] ?? '')),
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($data['ean'] ?? '')),
         ]);
 
         return true;

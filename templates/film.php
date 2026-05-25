@@ -269,24 +269,14 @@
                 <?php endif; ?>
 
                 <?php if ($isWishlist): ?>
-                    <section class="film-promote-panel import-form">
+                    <section class="film-promote-panel">
                         <h2 class="film-promote-panel__title">Ajouter à mes films</h2>
                         <p class="hint">Vous avez acheté ce film ? Il passera dans « Mes films ».</p>
-                        <form method="post" action="/promouvoir-collection.php">
-                            <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
-                            <input type="hidden" name="film_id" value="<?= $filmId ?>">
-                            <?php if (isset($filmListContext)): ?>
-                                <?php require MONCINE_ROOT . '/templates/_film_list_context_fields.php'; ?>
-                            <?php endif; ?>
-                            <label for="promote_support">Support physique (optionnel)</label>
-                            <select name="support_physique" id="promote_support">
-                                <option value="">— Plus tard —</option>
-                                <?php foreach (Moncine\SupportPhysique::choices() as $key => $label): ?>
-                                    <option value="<?= Moncine\View::escape($key) ?>"><?= Moncine\View::escape($label) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" class="btn btn-primary">J’ai acheté ce film</button>
-                        </form>
+                        <?php
+                        $wishlistTargets = $wishlistTargets ?? [];
+                        $includeListContext = true;
+                        require MONCINE_ROOT . '/templates/_film_promote_wishlist_form.php';
+                        ?>
                     </section>
                 <?php else: ?>
                 <section class="marquer-vu-panel">

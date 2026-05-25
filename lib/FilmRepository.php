@@ -387,11 +387,19 @@ final class FilmRepository
         return [];
     }
 
-    /** Passe un film de la wishlist à la collection. */
-    public function promoteToCollection(int $libraryId, string $supportKey = ''): bool
-    {
+    /**
+     * Passe un film de la wishlist à la collection.
+     *
+     * @param int $wishlistTargetId ID d’une ligne wishlist_targets (support + EAN pré-remplis).
+     */
+    public function promoteToCollection(
+        int $libraryId,
+        string $supportKey = '',
+        string $ean = '',
+        ?int $wishlistTargetId = null
+    ): bool {
         if ($this->engine instanceof CatalogFilmRepository) {
-            return $this->engine->promoteToCollection($libraryId, $supportKey);
+            return $this->engine->promoteToCollection($libraryId, $supportKey, $ean, $wishlistTargetId);
         }
 
         return false;

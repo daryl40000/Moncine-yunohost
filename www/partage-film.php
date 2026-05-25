@@ -11,6 +11,7 @@ use Moncine\OeuvreEanRepository;
 use Moncine\ShareLinkFilmRepository;
 use Moncine\ShareLinkScope;
 use Moncine\ShareLinkService;
+use Moncine\WishlistTargetRepository;
 use Moncine\SupportPhysique;
 use Moncine\View;
 
@@ -35,7 +36,17 @@ if ($link === null) {
 }
 
 $film = (new ShareLinkFilmRepository())->findByIdForLink($link, $filmId);
-$scopeLabel = ShareLinkScope::label((string) ($link['scope'] ?? ''));
+$scope = ShareLinkScope::normalize((string) ($link['scope'] ?? ''));
+$scopeLabel = ShareLinkScope::label($scope);
+
+$wishlistTargets = [];
+if (
+    $film !== null
+    && $scope === ShareLinkScope::WISHLIST
+    && WishlistTargetRepository::tableExists()
+) {
+    $wishlistTargets = (new WishlistTargetRepository())->listForBibliothequeId($filmId);
+}
 
 $listContext = ShareLinkService::collectionQueryParams(
     trim((string) ($_GET['q'] ?? '')),
@@ -71,4 +82,6 @@ View::render('partage-film', [
     'scopeLabel' => $scopeLabel,
     'catalogEan' => $catalogEan,
     'supportLabel' => $film !== null ? SupportPhysique::label((string) ($film['support_physique'] ?? '')) : '',
+    'scope' => $scope,
+    'wishlistTargets' => $wishlistTargets,
 ]);

@@ -29,7 +29,7 @@ Fonctionnalités métier visées :
 10. ~~**EAN multiples par œuvre** (catalogue)~~ — **livré v0.8.0** : un code-barres par édition / support (DVD, Blu-ray, 4K…) — socle pour **recherche d’achat** ultérieure
 10 bis. ~~**Versions recherchées sur les envies**~~ — **livré v0.8.2** : plusieurs supports et EAN par envie (`wishlist_targets`) — complément personnel pour futurs comparateurs de prix
 10 ter. ~~**Profil public utilisateur**~~ — **livré v0.8.3** : page profil (stats, vignettes), listes lecture seule, liens depuis Mes amis / groupe
-11. **Suite cibles d’achat (envies)** — **prochaine (phase 7 bis)** : versions visibles sur partage visiteur, comparateur de prix (support + EAN), pré-remplissage du support au « J’ai acheté »
+11. ~~**Suite cibles d’achat (envies)**~~ (v0.8.8, partiel) : partage visiteur + « J’ai acheté » avec choix de version — **comparateur de prix reporté**
 12. **Collections de magazines** (titres, numéros, organisation par collection)
 13. **Magazines en PDF** + **lecteur PDF** (s’appuie sur la couche stockage)
 
@@ -37,7 +37,7 @@ Fonctionnalités métier visées :
 
 ## État actuel
 
-**Version applicative : 0.8.7**
+**Version applicative : 0.8.8**
 
 Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 
@@ -67,12 +67,13 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | **Sauvegarde base SQLite (v0.8.5)** | Export / restauration admin sur `/maintenance-catalogue.php` |
 | **UX accueil & partage (v0.8.6)** | Vignettes accueil, bouton profil, partage lien e-mail / Bluesky |
 | **Recherche personnes catalogue (v0.8.7)** | `/personnes.php` sur tout le catalogue, statut collection / envies |
-| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024` |
+| **Suite cibles d’achat (v0.8.8)** | Partage visiteur des versions recherchées ; « J’ai acheté » ; EAN normalisés ; UX liste envies compacte |
+| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024`, `025` |
 | **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
 
 ### Point d’étape — mai 2026
 
-**Version actuelle : 0.8.7.** Recherche acteur/réalisateur sur le catalogue. **Prochaine évolution : phase 7 bis** (suite cibles d’achat : partage, comparateur, « J’ai acheté »), puis **phase 8** (prêts).
+**Version actuelle : 0.8.8.** Partage visiteur des versions recherchées et « J’ai acheté » avec choix de version. **Comparateur de prix (7 bis.2) reporté.** Prochaine évolution majeure : **phase 8** (prêts).
 
 | Version | Contenu principal |
 |---------|-------------------|
@@ -92,6 +93,7 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | 0.8.5 | Sauvegarde / restauration complète de la base SQLite (admin) |
 | 0.8.6 | Accueil vignettes, profil en un clic, partage lien e-mail / Bluesky |
 | 0.8.7 | Recherche personnes sur le catalogue + badges bibliothèque |
+| 0.8.8 | Phase 7 bis : partage visiteur cibles, « J’ai acheté » (liste déroulante), EAN chiffres seuls (`025`) |
 
 ### Prochaines étapes
 
@@ -106,7 +108,7 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | Phase 7 — Partage visiteur (lien lecture seule) | ✅ Livré (v0.8.0) |
 | Cibles d’achat — envies (support + EAN) | ✅ Livré (v0.8.2) |
 | Profil public utilisateur (social) | ✅ Livré (v0.8.3) |
-| Phase 7 bis — Suite cibles d’achat (envies) | **Prochaine** |
+| Phase 7 bis — Suite cibles d’achat (envies) | **Partielle** (sans comparateur prix) |
 | Phase 8 — Prêts entre utilisateurs | À faire |
 | Phase 9 — Stockage fichiers (local + S3) | À faire |
 | Phase 10 — Export PDF | À faire |
@@ -643,7 +645,7 @@ flowchart LR
 
 ## Phase 7 bis — Suite cibles d’achat (envies)
 
-**Statut : à faire** — **prochaine évolution** après v0.8.2.
+**Statut : partiellement livré** (7 bis.1 et 7 bis.3) — **comparateur de prix (7 bis.2) reporté** (aucune API publique retenue pour l’instant).
 
 **Objectif :** exploiter la table **`wishlist_targets`** (support + EAN par envie) pour faciliter l’achat et la consultation par un proche, sans modifier le périmètre « lecture seule » du partage visiteur.
 
@@ -653,9 +655,9 @@ flowchart LR
 
 | # | Tâche |
 |---|--------|
-| 7 bis.1 | **Partage visiteur** : afficher les versions recherchées (support + EAN) sur **`/partage.php`** (liste envies) et **`/partage-film.php`** (fiche), en **lecture seule** |
-| 7 bis.2 | **Comparateur de prix** : à partir du support et de l’EAN d’une cible, proposer des liens ou une API externe de comparaison / disponibilité (choix technique ouvert en v1 : URLs marchands ou connecteur dédié) |
-| 7 bis.3 | **« J’ai acheté »** : permettre de **choisir** une version cible en wishlist pour **pré-remplir** le support (et l’EAN exemplaire si pertinent) lors du passage en collection |
+| 7 bis.1 | **Partage visiteur** : afficher les versions recherchées (support + EAN) sur **`/partage.php`** (liste envies) et **`/partage-film.php`** (fiche), en **lecture seule** | ✅ |
+| 7 bis.2 | **Comparateur de prix** : à partir du support et de l’EAN d’une cible, proposer des liens ou une API externe de comparaison / disponibilité (choix technique ouvert en v1 : URLs marchands ou connecteur dédié) | — reporté |
+| 7 bis.3 | **« J’ai acheté »** : permettre de **choisir** une version cible en wishlist pour **pré-remplir** le support (et l’EAN exemplaire si pertinent) lors du passage en collection | ✅ |
 
 ### Critère terminé
 
@@ -976,6 +978,7 @@ Fonctionnalité transversale déjà partiellement en place :
 
 ### Historique roadmap (récent)
 
+- 2026-05-19 — **Version 0.8.8** : **partage visiteur** des versions recherchées sur les liens envies ; **« J’ai acheté »** avec choix d’une cible (support + EAN pré-remplis). Comparateur de prix reporté.
 - 2026-05-19 — **Version 0.8.7** : **recherche acteur/réalisateur** sur tout le catalogue avec statut collection / envies ; accueil épuré.
 - 2026-05-19 — **Version 0.8.6** : **accueil** (vignettes), **bouton profil**, **partage** des liens par e-mail et Bluesky.
 - 2026-05-19 — **Version 0.8.5** : **sauvegarde / restauration** de la base SQLite complète (admin, sécurisée).
@@ -988,4 +991,4 @@ Fonctionnalité transversale déjà partiellement en place :
 
 ---
 
-*Dernière mise à jour : 19 mai 2026 — v0.8.7 livrée ; prochaine cible : **phase 7 bis** (suite cibles d’achat sur envies), puis **phase 8** (prêts).*
+*Dernière mise à jour : 19 mai 2026 — v0.8.8 livrée (phase 7 bis partielle) ; prochaine cible : **phase 8** (prêts) ou comparateur de prix si API retenue.*

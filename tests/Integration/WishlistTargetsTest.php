@@ -8,6 +8,7 @@ use Moncine\Auth;
 use Moncine\BibliothequeRepository;
 use Moncine\FilmRepository;
 use Moncine\FoyerRepository;
+use Moncine\UserContext;
 use Moncine\LibraryStatut;
 use Moncine\OeuvreEanRepository;
 use Moncine\SchemaMigrator;
@@ -51,13 +52,65 @@ final class WishlistTargetsTest extends MoncineTestCase
         $map = $targets->mapByBibliothequeIds([$filmId]);
         $this->assertCount(2, $map[$filmId] ?? []);
 
-        $this->assertTrue((new BibliothequeRepository())->promoteToCollection(
+        $this->assertTrue((new FilmRepository())->promoteToCollection(
             $filmId,
-            $userId,
-            $foyerId,
-            SupportPhysique::DVD
+            '',
+            '',
+            $bluray
         ));
+        $entry = (new BibliothequeRepository())->findById($filmId, $userId, $foyerId);
+        $this->assertNotNull($entry);
+        $this->assertSame(LibraryStatut::COLLECTION, $entry['statut'] ?? '');
+        $this->assertSame(SupportPhysique::BLURAY, $entry['support_physique'] ?? '');
         $this->assertSame([], $targets->listForBibliothequeId($filmId));
+    }
+
+    public function testPromoteWithWishlistTargetPrefillsSupportAndEan(): void
+    {
+        $this->loginAsAdmin();
+        $userId = UserContext::currentUserId();
+        $foyerId = (new FoyerRepository())->currentFoyerIdForUser($userId);
+
+        $oeuvreId = $this->seedCatalogOeuvre('Film Promote EAN', 'Réal Promote');
+        $filmId = (new FilmRepository())->addFromCatalogOeuvre($oeuvreId, LibraryStatut::WISHLIST);
+        $this->assertIsInt($filmId);
+
+        $targetId = (new WishlistTargetRepository())->add(
+            $filmId,
+            SupportPhysique::BLURAY_4K,
+            '4012345678901'
+        );
+        $this->assertIsInt($targetId);
+
+        $this->assertTrue((new FilmRepository())->promoteToCollection($filmId, '', '', $targetId));
+        $entry = (new BibliothequeRepository())->findById($filmId, $userId, $foyerId);
+        $this->assertNotNull($entry);
+        $this->assertSame(SupportPhysique::BLURAY_4K, $entry['support_physique'] ?? '');
+        $this->assertSame('4012345678901', $entry['ean'] ?? '');
+    }
+
+    public function testUpdateManualStripsSpacesFromCollectionEan(): void
+    {
+        $this->loginAsAdmin();
+        $oeuvreId = $this->seedCatalogOeuvre('Film EAN Espaces', 'Réal EAN Espaces');
+        $filmId = (new FilmRepository())->addFromCatalogOeuvre($oeuvreId, LibraryStatut::COLLECTION);
+        $this->assertIsInt($filmId);
+
+        $result = (new FilmRepository())->updateManual($filmId, [
+            'support_physique' => SupportPhysique::DVD,
+            'format_image' => '',
+            'format_son' => '',
+            'saga' => '',
+            'saga_ordre' => 0,
+            'saison_numero' => 0,
+            'saison_label' => '',
+            'ean' => '376 006 123 4567',
+        ]);
+        $this->assertTrue($result);
+
+        $film = (new FilmRepository())->findById($filmId);
+        $this->assertNotNull($film);
+        $this->assertSame('3760061234567', $film['ean'] ?? '');
     }
 
     public function testAddFromCatalogOeuvreEan(): void

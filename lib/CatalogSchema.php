@@ -148,4 +148,17 @@ final class CatalogSchema
                 GROUP BY h.user_id
             ) member_note) AS note_foyer_moy';
     }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    public static function normalizeFilmRow(array $row): array
+    {
+        if (array_key_exists('ean', $row)) {
+            $row['ean'] = OeuvreEanRepository::normalizeEan((string) ($row['ean'] ?? ''));
+        }
+
+        return $row;
+    }
 }

@@ -13,6 +13,7 @@ use Moncine\FoyerRepository;
 use Moncine\ShareLinkFilmRepository;
 use Moncine\ShareLinkScope;
 use Moncine\ShareLinkService;
+use Moncine\WishlistTargetRepository;
 use Moncine\UserProfile;
 use Moncine\UtilisateurRepository;
 use Moncine\View;
@@ -43,9 +44,16 @@ $viewMode = CollectionViewMode::normalize((string) ($_GET['view'] ?? ''));
 
 $films = (new ShareLinkFilmRepository())->findAllForLink($link, $sortBy, $sortDir, $query, $kindFilter);
 
+$scope = ShareLinkScope::normalize((string) ($link['scope'] ?? ''));
+$showWishlistTargets = $scope === ShareLinkScope::WISHLIST && WishlistTargetRepository::tableExists();
+$wishlistTargetsByFilmId = [];
+if ($showWishlistTargets && $films !== []) {
+    $ids = array_map(static fn (array $f): int => (int) ($f['id'] ?? 0), $films);
+    $wishlistTargetsByFilmId = (new WishlistTargetRepository())->mapByBibliothequeIds($ids);
+}
+
 $owner = (new UtilisateurRepository())->findById((int) ($link['user_id'] ?? 0));
 $ownerLabel = $owner !== null ? UserProfile::displayName($owner) : 'Un membre Moncine';
-$scope = ShareLinkScope::normalize((string) ($link['scope'] ?? ''));
 $scopeLabel = ShareLinkScope::label($scope);
 if ($scope === ShareLinkScope::COLLECTION) {
     $foyerId = (int) ($link['foyer_id'] ?? 0);
@@ -71,4 +79,6 @@ View::render('partage', [
     'viewMode' => $viewMode,
     'searched' => $query !== '',
     'totalCount' => count($films),
+    'showWishlistTargets' => $showWishlistTargets,
+    'wishlistTargetsByFilmId' => $wishlistTargetsByFilmId,
 ]);

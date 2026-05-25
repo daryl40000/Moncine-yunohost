@@ -116,7 +116,7 @@ $oeuvreId = (int) ($film['oeuvre_id'] ?? 0);
             <?php endif; ?>
             <input type="text" name="ean" id="edit_ean" inputmode="numeric"
                    placeholder="13 chiffres"
-                   value="<?= Moncine\View::escape(Moncine\View::formatEan((string) ($film['ean'] ?? ''))) ?>">
+                   value="<?= Moncine\View::escape(Moncine\OeuvreEanRepository::normalizeEan((string) ($film['ean'] ?? ''))) ?>">
         </fieldset>
 
         <button type="submit" class="btn btn-primary">Enregistrer mon exemplaire</button>

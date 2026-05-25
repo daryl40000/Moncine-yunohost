@@ -234,21 +234,21 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
                             <?php endif; ?>
                         </td>
                         <td class="wishlist-actions">
-                            <form method="post" action="/souhaits.php" class="wishlist-promote-form import-form">
-                                <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
-                                <input type="hidden" name="action" value="promote">
-                                <input type="hidden" name="film_id" value="<?= $filmId ?>">
-                                <input type="hidden" name="sort" value="<?= Moncine\View::escape($sortBy) ?>">
-                                <input type="hidden" name="dir" value="<?= Moncine\View::escape($sortDir) ?>">
-                                <input type="hidden" name="q" value="<?= Moncine\View::escape($query) ?>">
-                                <select name="support_physique" aria-label="Support pour <?= Moncine\View::escape($film['titre']) ?>">
-                                    <option value="">Support ?</option>
-                                    <?php foreach (Moncine\SupportPhysique::choices() as $key => $label): ?>
-                                        <option value="<?= Moncine\View::escape($key) ?>"><?= Moncine\View::escape($label) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" class="btn btn-primary btn-sm">J’ai acheté</button>
-                            </form>
+                            <?php
+                            $formAction = '/souhaits.php';
+                            $wishlistTargets = $targets;
+                            $includeListContext = false;
+                            $formClass = 'wishlist-promote-form import-form';
+                            $compactPromoteForm = true;
+                            $formId = '';
+                            $extraHiddenFields = [
+                                ['action', 'promote'],
+                                ['sort', $sortBy],
+                                ['dir', $sortDir],
+                                ['q', $query],
+                            ];
+                            require MONCINE_ROOT . '/templates/_film_promote_wishlist_form.php';
+                            ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

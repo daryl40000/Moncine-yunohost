@@ -185,7 +185,7 @@ final class FilmManualEdit
             'support_physique' => SupportPhysique::normalize((string) ($post['support_physique'] ?? '')),
             'saison_numero' => $saisonNumero,
             'saison_label' => $saisonLabel,
-            'ean' => preg_replace('/\D+/', '', (string) ($post['ean'] ?? '')) ?? '',
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($post['ean'] ?? '')),
         ];
     }
 

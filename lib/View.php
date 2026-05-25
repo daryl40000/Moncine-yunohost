@@ -69,17 +69,10 @@ final class View
         );
     }
 
-    /** Affichage lisible d’un code EAN (séparation par groupes si 13 chiffres). */
+    /** Affichage d’un code EAN (chiffres seuls, comme en base). */
     public static function formatEan(string $ean): string
     {
-        $digits = preg_replace('/\D+/', '', $ean) ?? '';
-        if (strlen($digits) === 13) {
-            return substr($digits, 0, 1) . ' '
-                . substr($digits, 1, 6) . ' '
-                . substr($digits, 7, 6);
-        }
-
-        return trim($ean);
+        return OeuvreEanRepository::normalizeEan($ean);
     }
 
     /**
@@ -95,7 +88,7 @@ final class View
             if ($support === '') {
                 continue;
             }
-            $ean = trim((string) ($row['ean'] ?? ''));
+            $ean = OeuvreEanRepository::normalizeEan((string) ($row['ean'] ?? ''));
             $parts[] = $ean !== '' ? $support . ' · ' . self::formatEan($ean) : $support;
         }
 

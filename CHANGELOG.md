@@ -7,6 +7,34 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.8] — 2026-05-19
+
+Phase **7 bis** (suite cibles d’achat sur les envies), hors comparateur de prix.
+
+### Ajouté
+
+- **Partage visiteur (envies)** : sur les liens « Mes envies », affichage en lecture seule des **versions recherchées** (support + EAN) — liste `/partage.php` et fiche `/partage-film.php`.
+- **« J’ai acheté »** : choix d’une **version cible** (`wishlist_targets`) pour pré-remplir le support et l’EAN lors du passage en collection — fiche film et liste Mes envies.
+- **Migration `025_ean_digits_only.sql`** : normalisation des EAN déjà en base (chiffres seuls).
+
+### Amélioré
+
+- **Mes envies** : choix de la version achetée en **liste déroulante** (lignes du tableau plus compactes qu’avec les boutons radio).
+
+### Corrigé
+
+- **EAN** : stockage, affichage et formulaires en **chiffres seuls** (plus d’espaces pour la lecture ni en base) ; correction automatique à l’ouverture d’une fiche collection.
+
+### Reporté
+
+- **Comparateur de prix** (phase 7 bis.2) : aucune API publique retenue pour l’instant.
+
+### Tests
+
+- `WishlistTargetsTest` (promotion avec cible, EAN sans espaces), `ShareFeaturesTest` (cibles sur lien envies), `OeuvreEanNormalizeTest`.
+
+---
+
 ## [0.8.7] — 2026-05-19
 
 ### Ajouté

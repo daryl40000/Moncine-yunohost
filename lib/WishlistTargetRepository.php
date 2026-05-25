@@ -27,6 +27,24 @@ final class WishlistTargetRepository
         return $stmt !== false && $stmt->fetchColumn() !== false;
     }
 
+    /** @return ?array<string, mixed> */
+    public function findByIdForBibliotheque(int $targetId, int $bibliothequeId): ?array
+    {
+        if ($targetId <= 0 || $bibliothequeId <= 0 || !self::tableExists()) {
+            return null;
+        }
+        $stmt = $this->db->prepare(
+            'SELECT id, bibliotheque_id, support_physique, ean, oeuvre_ean_id, label, created_at
+             FROM wishlist_targets
+             WHERE id = ? AND bibliotheque_id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$targetId, $bibliothequeId]);
+        $row = $stmt->fetch();
+
+        return $row !== false ? $row : null;
+    }
+
     /** @return list<array<string, mixed>> */
     public function listForBibliothequeId(int $bibliothequeId): array
     {

@@ -488,7 +488,7 @@ final class CatalogFilmRepository
                 : max(0, (int) ($data['saga_ordre'] ?? 0)),
             'saison_numero' => max(0, (int) ($data['saison_numero'] ?? 0)),
             'saison_label' => trim((string) ($data['saison_label'] ?? '')),
-            'ean' => preg_replace('/\D+/', '', (string) ($data['ean'] ?? '')) ?? '',
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($data['ean'] ?? '')),
             'statut' => $statut,
         ];
     }
@@ -1334,7 +1334,7 @@ final class CatalogFilmRepository
             'saga_ordre' => $sagaOrdre,
             'saison_numero' => $saisonNumero,
             'saison_label' => $saisonLabel,
-            'ean' => trim((string) ($data['ean'] ?? '')),
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($data['ean'] ?? '')),
         ]);
 
         return true;
@@ -1547,7 +1547,7 @@ final class CatalogFilmRepository
             'saga_ordre' => max(0, (int) ($data['saga_ordre'] ?? 0)),
             'saison_numero' => max(0, (int) ($data['saison_numero'] ?? 0)),
             'saison_label' => trim((string) ($data['saison_label'] ?? '')),
-            'ean' => preg_replace('/\D+/', '', (string) ($data['ean'] ?? '')) ?? '',
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($data['ean'] ?? '')),
             'statut' => $statut,
         ];
         if ($libraryPayload['saga'] === '') {
@@ -1565,9 +1565,20 @@ final class CatalogFilmRepository
         return $libraryId;
     }
 
-    public function promoteToCollection(int $libraryId, string $supportKey = ''): bool
-    {
-        return $this->bibliotheque->promoteToCollection($libraryId, $this->userId(), $this->foyerId(), $supportKey);
+    public function promoteToCollection(
+        int $libraryId,
+        string $supportKey = '',
+        string $ean = '',
+        ?int $wishlistTargetId = null
+    ): bool {
+        return $this->bibliotheque->promoteToCollection(
+            $libraryId,
+            $this->userId(),
+            $this->foyerId(),
+            $supportKey,
+            $ean,
+            $wishlistTargetId
+        );
     }
 
     /** @return list<string> */
@@ -1751,7 +1762,7 @@ final class CatalogFilmRepository
             'saga_ordre' => $payload['saga_ordre'] ?? 0,
             'saison_numero' => $payload['saison_numero'] ?? 0,
             'saison_label' => $payload['saison_label'] ?? '',
-            'ean' => $payload['ean'] ?? '',
+            'ean' => OeuvreEanRepository::normalizeEan((string) ($payload['ean'] ?? '')),
             'statut' => LibraryStatut::normalize((string) ($data['statut'] ?? LibraryStatut::COLLECTION)),
         ];
 

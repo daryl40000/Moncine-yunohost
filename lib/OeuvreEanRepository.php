@@ -135,8 +135,11 @@ final class OeuvreEanRepository
         return $stmt->rowCount() > 0 ? true : 'Code EAN introuvable.';
     }
 
+    /** Chiffres uniquement (supprime espaces, tirets, séparateurs Unicode, etc.). */
     public static function normalizeEan(string $ean): string
     {
-        return preg_replace('/\D+/', '', trim($ean)) ?? '';
+        $ean = preg_replace('/\p{Z}+/u', '', $ean) ?? $ean;
+
+        return preg_replace('/\D+/', '', $ean) ?? '';
     }
 }

@@ -50,5 +50,5 @@ $isSerie = $currentFormValue === Moncine\MoncineContentKind::SERIE
 <label for="<?= Moncine\View::escape($fieldPrefix) ?>_ean">Code-barres (EAN)</label>
 <input type="text" name="ean" id="<?= Moncine\View::escape($fieldPrefix) ?>_ean" inputmode="numeric"
        placeholder="ex. 3760061234567 (optionnel)"
-       value="<?= Moncine\View::escape((string) ($film['ean'] ?? '')) ?>">
+       value="<?= Moncine\View::escape(Moncine\OeuvreEanRepository::normalizeEan((string) ($film['ean'] ?? ''))) ?>">
 <p class="hint">Référence de votre édition DVD/Blu-ray. L’enrichissement des infos se fait via TMDB.</p>

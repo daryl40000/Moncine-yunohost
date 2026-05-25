@@ -27,8 +27,10 @@ Csrf::rejectUnlessValid($_POST, '/film.php?id=' . $filmId);
 $repo = new FilmRepository();
 $supportRaw = (string) ($_POST['support_physique'] ?? '');
 $supportKey = SupportPhysique::normalize($supportRaw);
+$targetId = (int) ($_POST['wishlist_target_id'] ?? 0);
+$wishlistTargetId = $targetId > 0 ? $targetId : null;
 
-if (!$repo->promoteToCollection($filmId, $supportKey)) {
+if (!$repo->promoteToCollection($filmId, $supportKey, '', $wishlistTargetId)) {
     header('Location: /film.php?id=' . $filmId . '&promote_error=' . rawurlencode('Impossible d’ajouter à vos films.'));
     exit;
 }

@@ -93,7 +93,43 @@ final class SchemaMigrator
             }
         }
 
+        $this->normalizeStoredEans();
+
         return $applied;
+    }
+
+    /**
+     * Corrige les EAN déjà en base (espaces, tirets, etc.) — chiffres uniquement.
+     */
+    public function normalizeStoredEans(): void
+    {
+        $tables = [
+            ['bibliotheque', 'ean'],
+            ['oeuvre_eans', 'ean'],
+            ['wishlist_targets', 'ean'],
+        ];
+        foreach ($tables as [$table, $column]) {
+            if (!$this->tableExists($table)) {
+                continue;
+            }
+            $stmt = $this->pdo->query(
+                'SELECT id, ' . $column . ' AS ean_value FROM ' . $table
+                . ' WHERE ' . $column . " IS NOT NULL AND TRIM(" . $column . ") != ''"
+            );
+            if ($stmt === false) {
+                continue;
+            }
+            $update = $this->pdo->prepare(
+                'UPDATE ' . $table . ' SET ' . $column . ' = ? WHERE id = ?'
+            );
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $raw = (string) ($row['ean_value'] ?? '');
+                $normalized = OeuvreEanRepository::normalizeEan($raw);
+                if ($normalized !== $raw) {
+                    $update->execute([$normalized, (int) ($row['id'] ?? 0)]);
+                }
+            }
+        }
     }
 
     public function schemaVersion(): int

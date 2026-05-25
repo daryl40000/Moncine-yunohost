@@ -14,6 +14,7 @@ use Moncine\ShareLinkService;
 use Moncine\SupportPhysique;
 use Moncine\Tests\Support\MoncineTestCase;
 use Moncine\UserContext;
+use Moncine\WishlistTargetRepository;
 
 final class ShareFeaturesTest extends MoncineTestCase
 {
@@ -92,6 +93,33 @@ final class ShareFeaturesTest extends MoncineTestCase
 
         $this->assertTrue($service->revoke((int) ($colLink['id'] ?? 0), $userId));
         $this->assertNull($service->resolve($token));
+    }
+
+    public function testWishlistShareLinkExposesTargets(): void
+    {
+        $userId = $this->loginAsAdmin();
+        $foyerId = UserContext::currentFoyerId();
+        if (!WishlistTargetRepository::tableExists()) {
+            $this->markTestSkipped('Table wishlist_targets absente.');
+        }
+
+        $oeuvreId = $this->seedCatalogOeuvre('Film Partage Cibles', 'Réal Partage');
+        $filmId = (new \Moncine\FilmRepository())->addFromCatalogOeuvre($oeuvreId, LibraryStatut::WISHLIST);
+        $this->assertIsInt($filmId);
+
+        (new WishlistTargetRepository())->add($filmId, SupportPhysique::DVD, '3760061234567');
+        (new WishlistTargetRepository())->add($filmId, SupportPhysique::BLURAY, '');
+
+        $created = (new ShareLinkService())->create($userId, $foyerId, ShareLinkScope::WISHLIST, 'cibles');
+        $this->assertIsArray($created);
+        $link = (new ShareLinkService())->resolve((string) $created['token']);
+        $this->assertNotNull($link);
+
+        $films = (new ShareLinkFilmRepository())->findAllForLink($link);
+        $this->assertCount(1, $films);
+
+        $map = (new WishlistTargetRepository())->mapByBibliothequeIds([$filmId]);
+        $this->assertCount(2, $map[$filmId] ?? []);
     }
 
     public function testInvalidTokenIsRejected(): void

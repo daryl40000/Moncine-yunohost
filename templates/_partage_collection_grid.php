@@ -9,7 +9,11 @@
  * @var string $query
  * @var string $kindFilter
  * @var string $viewMode
+ * @var bool $showWishlistTargets
+ * @var array<int, list<array<string, mixed>>> $wishlistTargetsByFilmId
  */
+$showWishlistTargets = !empty($showWishlistTargets);
+$wishlistTargetsByFilmId = $wishlistTargetsByFilmId ?? [];
 $gridSortLink = static function (string $label, string $column) use (
     $rawToken,
     $sortBy,
@@ -50,6 +54,7 @@ $gridSortLink = static function (string $label, string $column) use (
         );
         $annee = (int) ($film['annee'] ?? 0);
         $kindKey = Moncine\ContentKindFilter::categoryKey($film);
+        $targets = $wishlistTargetsByFilmId[$filmId] ?? [];
         ?>
         <li class="collection-grid__item" role="listitem">
             <article class="collection-grid__card">
@@ -72,12 +77,21 @@ $gridSortLink = static function (string $label, string $column) use (
                         <?php if ($annee > 0): ?>
                             <span class="collection-grid__year"><?= $annee ?></span>
                         <?php endif; ?>
-                        <?php
-                        $supportLabel = Moncine\SupportPhysique::label((string) ($film['support_physique'] ?? ''));
-                        if ($supportLabel !== ''):
-                            ?>
-                            <span class="collection-grid__support"><?= Moncine\View::escape($supportLabel) ?></span>
-                        <?php endif; ?>
+                        <?php if ($showWishlistTargets): ?>
+                            <?php if ($targets !== []): ?>
+                                <span class="collection-grid__targets hint">
+                                    <?= Moncine\View::escape(Moncine\View::formatWishlistTargetsSummary($targets)) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="collection-grid__targets hint">—</span>
+                            <?php endif; ?>
+                        <?php else:
+                            $supportLabel = Moncine\SupportPhysique::label((string) ($film['support_physique'] ?? ''));
+                            if ($supportLabel !== ''):
+                                ?>
+                                <span class="collection-grid__support"><?= Moncine\View::escape($supportLabel) ?></span>
+                            <?php endif;
+                        endif; ?>
                     </p>
                 </a>
             </article>

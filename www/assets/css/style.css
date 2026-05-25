@@ -1886,14 +1886,60 @@ textarea {
 
 .wishlist-actions .wishlist-promote-form {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.35rem;
+    min-width: 10rem;
 }
 
-.wishlist-actions select {
-    max-width: 9rem;
+.wishlist-actions .wishlist-promote-form select {
+    max-width: 100%;
     font-size: 0.85rem;
+}
+
+/* Mes envies : version + support + bouton sur une ligne compacte */
+.wishlist-actions .wishlist-promote-form--compact {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.wishlist-actions .wishlist-promote-form--compact .film-promote-form__target-select,
+.wishlist-actions .wishlist-promote-form--compact select[name="support_physique"] {
+    flex: 1 1 8.5rem;
+    min-width: 7rem;
+    max-width: 14rem;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.35rem;
+}
+
+.wishlist-actions .wishlist-promote-form--compact .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.film-promote-form .film-promote-form__target-select {
+    max-width: 100%;
+}
+
+.wishlist-targets-readonly {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.wishlist-targets-readonly li + li {
+    margin-top: 0.35rem;
+}
+
+.collection-grid__targets {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
 }
 
 .films-table--selectable .col-select {

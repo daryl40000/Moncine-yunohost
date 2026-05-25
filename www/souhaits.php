@@ -66,13 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $filmId = (int) ($_POST['film_id'] ?? 0);
     $supportRaw = (string) ($_POST['support_physique'] ?? '');
     $supportKey = SupportPhysique::normalize($supportRaw);
+    $targetId = (int) ($_POST['wishlist_target_id'] ?? 0);
+    $wishlistTargetId = $targetId > 0 ? $targetId : null;
 
     if ($filmId <= 0) {
         header('Location: ' . $redirectUrl . '&promote_error=' . rawurlencode('Film invalide.'));
         exit;
     }
 
-    if (!$repo->promoteToCollection($filmId, $supportKey)) {
+    if (!$repo->promoteToCollection($filmId, $supportKey, '', $wishlistTargetId)) {
         header('Location: ' . $redirectUrl . '&promote_error=' . rawurlencode('Impossible d’ajouter ce film à vos films.'));
         exit;
     }

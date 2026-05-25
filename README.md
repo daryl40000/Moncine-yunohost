@@ -1,6 +1,6 @@
 # Moncine
 
-**Version : 0.8.7**
+**Version : 0.8.8**
 
 **Auteur :** Stéphane MATER  
 **Licence :** [GNU General Public License v3.0 ou ultérieure](LICENSE) (GPL-3.0-or-later)
@@ -44,7 +44,7 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 - ~~Sauvegarde / restauration base SQLite (admin)~~ (v0.8.5)
 - ~~Accueil vignettes, bouton profil, partage e-mail / Bluesky~~ (v0.8.6)
 - ~~Recherche acteur/réalisateur sur tout le catalogue~~ (v0.8.7)
-- **Suite cibles d’achat** (phase 7 bis, prochaine) : partage visiteur, comparateur de prix, pré-remplissage « J’ai acheté »
+- ~~Suite cibles d’achat (partage visiteur + « J’ai acheté » avec choix de version)~~ (v0.8.8) — comparateur de prix reporté
 - Prêts entre utilisateurs (phase 8)
 - Stockage fichiers (dossier share YunoHost + S3)
 - Export PDF
@@ -151,6 +151,7 @@ Les fichiers dans `sql/migrations_legacy/` ne sont **pas** appliqués (historiqu
 | **v0.8.5** | Sauvegarde / restauration `moncine.db` depuis `/maintenance-catalogue.php` (aucune migration SQL) |
 | **v0.8.6** | Accueil (vignettes), bouton profil, partage lien e-mail / Bluesky (aucune migration SQL) |
 | **v0.8.7** | Recherche personnes sur le catalogue + statut bibliothèque (aucune migration SQL) |
+| **v0.8.8** | Phase 7 bis : partage visiteur des cibles d’achat, « J’ai acheté » avec choix de version, EAN chiffres seuls (`025`) |
 
 ---
 

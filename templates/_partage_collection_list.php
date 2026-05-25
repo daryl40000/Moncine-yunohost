@@ -10,7 +10,11 @@
  * @var string $query
  * @var string $kindFilter
  * @var string $viewMode
+ * @var bool $showWishlistTargets
+ * @var array<int, list<array<string, mixed>>> $wishlistTargetsByFilmId
  */
+$showWishlistTargets = !empty($showWishlistTargets);
+$wishlistTargetsByFilmId = $wishlistTargetsByFilmId ?? [];
 $listContext = Moncine\ShareLinkService::collectionQueryParams(
     $query ?? '',
     $sortBy ?? 'titre',
@@ -31,7 +35,11 @@ $listContext = Moncine\ShareLinkService::collectionQueryParams(
             <?php $shareSortHeader('Réalisateur', 'realisateur'); ?>
             <th scope="col">Style</th>
             <th scope="col">Saga</th>
-            <?php $shareSortHeader('Support', 'support_physique'); ?>
+            <?php if ($showWishlistTargets): ?>
+                <th scope="col">Versions recherchées</th>
+            <?php else: ?>
+                <?php $shareSortHeader('Support', 'support_physique'); ?>
+            <?php endif; ?>
         </tr>
     </thead>
     <tbody>
@@ -41,6 +49,7 @@ $listContext = Moncine\ShareLinkService::collectionQueryParams(
             $filmUrl = Moncine\ShareLinkService::filmUrl($rawToken, $filmId, $listContext);
             $sagaLabel = trim((string) ($film['saga'] ?? ''));
             $sagaOrdre = (int) ($film['saga_ordre'] ?? 0);
+            $targets = $wishlistTargetsByFilmId[$filmId] ?? [];
             ?>
             <tr>
                 <td class="col-poster">
@@ -81,9 +90,19 @@ $listContext = Moncine\ShareLinkService::collectionQueryParams(
                         —
                     <?php endif; ?>
                 </td>
-                <td><?= Moncine\View::escape(
-                    Moncine\SupportPhysique::label((string) ($film['support_physique'] ?? '')) ?: '—'
-                ) ?></td>
+                <?php if ($showWishlistTargets): ?>
+                    <td class="wishlist-targets-summary">
+                        <?php if ($targets !== []): ?>
+                            <?= Moncine\View::escape(Moncine\View::formatWishlistTargetsSummary($targets)) ?>
+                        <?php else: ?>
+                            <span class="hint">—</span>
+                        <?php endif; ?>
+                    </td>
+                <?php else: ?>
+                    <td><?= Moncine\View::escape(
+                        Moncine\SupportPhysique::label((string) ($film['support_physique'] ?? '')) ?: '—'
+                    ) ?></td>
+                <?php endif; ?>
             </tr>
         <?php endforeach; ?>
     </tbody>

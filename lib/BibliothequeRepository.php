@@ -39,9 +39,12 @@ final class BibliothequeRepository
             'foyer_id' => $foyerId,
             'user_id' => $userId,
         ]);
-        $row = $stmt->fetch();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row === false) {
+            return null;
+        }
 
-        return $row ?: null;
+        return $this->normalizeAndRepairFilmRowEan($row);
     }
 
     public function findByOeuvreId(int $oeuvreId, int $userId, int $foyerId, ?string $statut = null): ?array
@@ -109,7 +112,7 @@ final class BibliothequeRepository
                 : max(0, (int) ($libraryData['saga_ordre'] ?? 0)),
             max(0, (int) ($libraryData['saison_numero'] ?? 0)),
             trim((string) ($libraryData['saison_label'] ?? '')),
-            trim((string) ($libraryData['ean'] ?? '')),
+            OeuvreEanRepository::normalizeEan((string) ($libraryData['ean'] ?? '')),
         ]);
 
         return (int) $this->db->lastInsertId();
@@ -139,7 +142,11 @@ final class BibliothequeRepository
         ] as $field) {
             if (array_key_exists($field, $libraryData)) {
                 $sets[] = $field . ' = :' . $field;
-                $params[$field] = $libraryData[$field];
+                $value = $libraryData[$field];
+                if ($field === 'ean') {
+                    $value = OeuvreEanRepository::normalizeEan((string) $value);
+                }
+                $params[$field] = $value;
             }
         }
         if ($sets === []) {
@@ -151,14 +158,29 @@ final class BibliothequeRepository
         $stmt->execute($params);
     }
 
-    public function promoteToCollection(int $id, int $userId, int $foyerId, string $supportKey = ''): bool
-    {
+    public function promoteToCollection(
+        int $id,
+        int $userId,
+        int $foyerId,
+        string $supportKey = '',
+        string $ean = '',
+        ?int $wishlistTargetId = null
+    ): bool {
         $item = $this->findById($id, $userId, $foyerId);
         if ($item === null || ($item['statut'] ?? '') === LibraryStatut::COLLECTION) {
             return false;
         }
         if ($foyerId <= 0) {
             return false;
+        }
+
+        if ($wishlistTargetId !== null && $wishlistTargetId > 0 && WishlistTargetRepository::tableExists()) {
+            $target = (new WishlistTargetRepository())->findByIdForBibliotheque($wishlistTargetId, $id);
+            if ($target === null) {
+                return false;
+            }
+            $supportKey = (string) ($target['support_physique'] ?? '');
+            $ean = (string) ($target['ean'] ?? '');
         }
 
         $oeuvreId = (int) ($item['oeuvre_id'] ?? 0);
@@ -175,6 +197,10 @@ final class BibliothequeRepository
         ];
         if ($supportKey !== '') {
             $data['support_physique'] = SupportPhysique::normalize($supportKey);
+        }
+        $ean = OeuvreEanRepository::normalizeEan($ean);
+        if ($ean !== '') {
+            $data['ean'] = $ean;
         }
         $this->update($id, $data);
         if (WishlistTargetRepository::tableExists()) {
@@ -195,6 +221,25 @@ final class BibliothequeRepository
         $stmt->execute([$id]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Corrige un EAN mal stocké (espaces, tirets) à la lecture de la fiche.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function normalizeAndRepairFilmRowEan(array $row): array
+    {
+        $libraryId = (int) ($row['id'] ?? 0);
+        $raw = (string) ($row['ean'] ?? '');
+        $clean = OeuvreEanRepository::normalizeEan($raw);
+        if ($clean !== $raw && $libraryId > 0) {
+            $this->update($libraryId, ['ean' => $clean]);
+        }
+        $row['ean'] = $clean;
+
+        return CatalogSchema::normalizeFilmRow($row);
     }
 
     public function countByStatut(int $userId, int $foyerId, string $statut): int

@@ -58,6 +58,16 @@
                         <dd><code><?= Moncine\View::escape(Moncine\View::formatEan((string) $catalogEan)) ?></code></dd>
                     <?php endif; ?>
 
+                    <?php if (($scope ?? '') === Moncine\ShareLinkScope::WISHLIST): ?>
+                        <dt>Versions recherchées</dt>
+                        <dd>
+                            <?php
+                            $emptyHint = 'Aucune version précisée pour cette envie.';
+                            require MONCINE_ROOT . '/templates/_wishlist_targets_readonly.php';
+                            ?>
+                        </dd>
+                    <?php endif; ?>
+
                     <?php if (trim((string) ($film['ean'] ?? '')) !== ''): ?>
                         <dt>Code-barres exemplaire</dt>
                         <dd><code><?= Moncine\View::escape(Moncine\View::formatEan((string) $film['ean'])) ?></code></dd>
