@@ -7,6 +7,21 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.9] — 2026-05-27
+
+Phase **8** (prêts entre amis) + correctifs installation locale.
+
+### Ajouté
+
+- **Prêts** : demandes de prêt entre amis, acceptation (réservation), validation du prêt et retour — page `/mes-prets.php`.
+- **Profil public** : sur la liste « Films de … », bouton **Demander un prêt**, affichage des statuts (déjà prêté / réservé / demande envoyée) et annulation de demande.
+- **Notifications** : notifications in-app (et e-mail si activé) sur demande/acceptation/refus/validation/retour.
+
+### Corrigé
+
+- **Installation / création du premier compte** : correction des transactions imbriquées lors de la création du groupe famille.
+- **Sessions PHP en local** : bascule vers `data/sessions` quand le répertoire système des sessions n’est pas accessible.
+
 ## [0.8.8] — 2026-05-19
 
 Phase **7 bis** (suite cibles d’achat sur les envies), hors comparateur de prix.

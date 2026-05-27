@@ -17,6 +17,11 @@ final class NotificationRepository
     public const KIND_FRIEND_REQUEST = 'friend_request';
     public const KIND_FRIEND_ACCEPTED = 'friend_accepted';
     public const KIND_GROUP_INVITE = 'group_invite';
+    public const KIND_LOAN_REQUEST = 'loan_request';
+    public const KIND_LOAN_ACCEPTED = 'loan_request_accepted';
+    public const KIND_LOAN_DECLINED = 'loan_request_declined';
+    public const KIND_LOAN_LENT = 'loan_lent';
+    public const KIND_LOAN_RETURNED = 'loan_returned';
 
     private PDO $db;
 

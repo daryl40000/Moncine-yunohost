@@ -109,7 +109,7 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | Cibles d’achat — envies (support + EAN) | ✅ Livré (v0.8.2) |
 | Profil public utilisateur (social) | ✅ Livré (v0.8.3) |
 | Phase 7 bis — Suite cibles d’achat (envies) | **Partielle** (sans comparateur prix) |
-| Phase 8 — Prêts entre utilisateurs | À faire |
+| Phase 8 — Prêts entre utilisateurs | ✅ Livré (v0.8.9) |
 | Phase 9 — Stockage fichiers (local + S3) | À faire |
 | Phase 10 — Export PDF | À faire |
 | Phase 11 — Mes BD | À faire |

@@ -109,7 +109,14 @@ final class FamilyGroupService
             return 'Le nom du groupe est obligatoire.';
         }
 
-        $this->db->beginTransaction();
+        // Cette méthode peut être appelée dans une transaction existante
+        // (ex. création du premier compte admin). SQLite/PDO ne supporte pas
+        // les transactions imbriquées, donc on ne démarre une transaction
+        // que si on n'en a pas déjà une.
+        $manageTransaction = !$this->db->inTransaction();
+        if ($manageTransaction) {
+            $this->db->beginTransaction();
+        }
         try {
             $this->db->prepare(
                 'INSERT INTO foyers (nom, kind, created_by_user_id, created_at)
@@ -125,11 +132,13 @@ final class FamilyGroupService
             $this->db->prepare('UPDATE utilisateurs SET foyer_id = ? WHERE id = ?')
                 ->execute([$foyerId, $founderId]);
 
-            $this->db->commit();
+            if ($manageTransaction) {
+                $this->db->commit();
+            }
 
             return $foyerId;
         } catch (\Throwable $e) {
-            if ($this->db->inTransaction()) {
+            if ($manageTransaction && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             throw $e;

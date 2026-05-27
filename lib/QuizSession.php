@@ -20,6 +20,37 @@ final class QuizSession
             return;
         }
 
+        // En local, le chemin système par défaut (ex. /var/lib/php/sessions) peut ne pas être
+        // accessible en écriture pour l'utilisateur qui lance `php -S ...`.
+        // On bascule donc vers un répertoire de sessions sous MONCINE_DATA si nécessaire.
+        $savePathRaw = (string) ini_get('session.save_path');
+        // Peut être de la forme "5;/var/lib/php/sessions" (préfixe = profondeur).
+        $savePath = $savePathRaw;
+        if (str_contains($savePath, ';')) {
+            $savePath = (string) substr($savePath, strrpos($savePath, ';') + 1);
+        }
+        $savePath = trim($savePath);
+
+        $savePathWritable = false;
+        if ($savePath !== '' && is_dir($savePath)) {
+            // is_writable() peut être trompeur selon l'environnement ; on tente un vrai write.
+            $probe = rtrim($savePath, '/') . '/.moncine_session_probe_' . bin2hex(random_bytes(6));
+            $savePathWritable = @file_put_contents($probe, '1') !== false;
+            if ($savePathWritable) {
+                @unlink($probe);
+            }
+        }
+
+        if ($savePath === '' || !is_dir($savePath) || !$savePathWritable) {
+            $localPath = rtrim((string) MONCINE_DATA, '/') . '/sessions';
+            if (!is_dir($localPath)) {
+                @mkdir($localPath, 0750, true);
+            }
+            if (is_dir($localPath) && is_writable($localPath)) {
+                ini_set('session.save_path', $localPath);
+            }
+        }
+
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_lifetime', '0');

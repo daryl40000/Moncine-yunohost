@@ -281,3 +281,52 @@ CREATE INDEX IF NOT EXISTS idx_wishlist_targets_bibliotheque ON wishlist_targets
 CREATE INDEX IF NOT EXISTS idx_wishlist_targets_ean
     ON wishlist_targets(ean)
     WHERE ean != '';
+
+CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bibliotheque_id INTEGER NOT NULL REFERENCES bibliotheque(id) ON DELETE CASCADE,
+    lender_user_id INTEGER NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    borrower_user_id INTEGER DEFAULT NULL REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    borrower_name TEXT NOT NULL DEFAULT '',
+    loaned_at TEXT NOT NULL DEFAULT (date('now')),
+    due_at TEXT DEFAULT NULL,
+    returned_at TEXT DEFAULT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_loans_bibliotheque_active
+    ON loans(bibliotheque_id)
+    WHERE returned_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_loans_lender_active
+    ON loans(lender_user_id, returned_at)
+    WHERE returned_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_loans_borrower_active
+    ON loans(borrower_user_id, returned_at)
+    WHERE borrower_user_id IS NOT NULL AND returned_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS loan_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bibliotheque_id INTEGER NOT NULL REFERENCES bibliotheque(id) ON DELETE CASCADE,
+    owner_user_id INTEGER NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    requester_user_id INTEGER NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'declined', 'canceled', 'lent')),
+    requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+    responded_at TEXT DEFAULT NULL,
+    lent_at TEXT DEFAULT NULL,
+    loan_id INTEGER DEFAULT NULL REFERENCES loans(id) ON DELETE SET NULL,
+    note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_loan_requests_unique_active
+    ON loan_requests(bibliotheque_id, requester_user_id)
+    WHERE status IN ('pending', 'accepted');
+
+CREATE INDEX IF NOT EXISTS idx_loan_requests_owner_status
+    ON loan_requests(owner_user_id, status, requested_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_loan_requests_requester_status
+    ON loan_requests(requester_user_id, status, requested_at DESC);

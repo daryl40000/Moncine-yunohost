@@ -8,6 +8,9 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Auth;
+use Moncine\FriendshipRepository;
+use Moncine\LoanRepository;
+use Moncine\LoanRequestRepository;
 use Moncine\UserProfile;
 use Moncine\UserPublicProfileService;
 use Moncine\View;
@@ -76,6 +79,11 @@ if ($user === null) {
 $isSelf = $viewerId === $targetUserId;
 $displayName = UserProfile::displayName($user);
 
+$areFriends = false;
+if (!$isSelf && FriendshipRepository::isAvailable()) {
+    $areFriends = (new FriendshipRepository())->areFriends($viewerId, $targetUserId);
+}
+
 $listFilms = [];
 $listViewings = [];
 $listMode = '';
@@ -103,11 +111,30 @@ if ($liste === 'collection') {
     $listViewings = $profile->listViewingHistory($targetUserId, $viewSort, $sortDir, $yearFilter);
 }
 
+$loanUi = [
+    'activeLoans' => [],
+    'myRequests' => [],
+    'reservedByOthers' => [],
+];
+if ($listMode === 'collection' && !$isSelf && $areFriends) {
+    if (LoanRepository::tableExists()) {
+        $loanUi['activeLoans'] = (new LoanRepository())->mapActiveLoansByBibliothequeId($targetUserId);
+    }
+    if (LoanRequestRepository::tableExists()) {
+        $reqRepo = new LoanRequestRepository();
+        $loanUi['myRequests'] = $reqRepo->mapActiveRequestsForViewer($targetUserId, $viewerId);
+        $loanUi['reservedByOthers'] = $reqRepo->mapReservedByOthers($targetUserId, $viewerId);
+    }
+}
+
 View::render('utilisateur', [
     'pageTitle' => $listTitle !== '' ? $listTitle : $displayName,
     'profileUser' => $user,
     'accessDenied' => '',
     'isSelf' => $isSelf,
+    'viewerId' => $viewerId,
+    'areFriends' => $areFriends,
+    'loanUi' => $loanUi,
     'stats' => $listMode === '' ? $profile->getStats($targetUserId) : [],
     'lastViewed' => $listMode === '' ? $profile->lastViewedFilms($targetUserId, 5) : [],
     'lastCollection' => $listMode === '' ? $profile->lastCollectionFilms($targetUserId, 5) : [],

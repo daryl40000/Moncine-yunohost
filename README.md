@@ -45,7 +45,7 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 - ~~Accueil vignettes, bouton profil, partage e-mail / Bluesky~~ (v0.8.6)
 - ~~Recherche acteur/réalisateur sur tout le catalogue~~ (v0.8.7)
 - ~~Suite cibles d’achat (partage visiteur + « J’ai acheté » avec choix de version)~~ (v0.8.8) — comparateur de prix reporté
-- Prêts entre utilisateurs (phase 8)
+- ~~Prêts entre utilisateurs (phase 8)~~ (v0.8.9)
 - Stockage fichiers (dossier share YunoHost + S3)
 - Export PDF
 - Mes BD

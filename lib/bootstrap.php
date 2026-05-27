@@ -9,6 +9,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/mbstring_polyfill.php';
 
 // Autoload : charge lib/NomClasse.php quand on écrit Moncine\NomClasse
 spl_autoload_register(static function (string $class): void {

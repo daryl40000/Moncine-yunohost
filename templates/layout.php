@@ -94,6 +94,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     '/mon-compte.php',
                     '/mes-amis.php',
                     '/mes-groupes.php',
+                    '/mes-prets.php',
                     '/utilisateur.php',
                     '/rechercher-utilisateurs.php',
                     '/import.php',
@@ -108,6 +109,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                         <a href="/parametres.php"<?= in_array($currentPath, ['/parametres.php', '/mon-compte.php'], true) ? ' aria-current="page"' : '' ?>>Compte</a>
                         <a href="/mes-amis.php"<?= $currentPath === '/mes-amis.php' ? ' aria-current="page"' : '' ?>>Mes amis</a>
                         <a href="/mes-groupes.php"<?= $currentPath === '/mes-groupes.php' ? ' aria-current="page"' : '' ?>>Mon groupe famille</a>
+                        <a href="/mes-prets.php"<?= $currentPath === '/mes-prets.php' ? ' aria-current="page"' : '' ?>>Mes prêts</a>
                         <a href="/rechercher-utilisateurs.php"<?= $currentPath === '/rechercher-utilisateurs.php' ? ' aria-current="page"' : '' ?>>Rechercher des utilisateurs</a>
                         <?php if ($canProposeToCatalog): ?>
                             <a href="/proposer-oeuvre.php"<?= in_array($currentPath, ['/proposer-oeuvre.php', '/mes-soumissions.php'], true) ? ' aria-current="page"' : '' ?>>

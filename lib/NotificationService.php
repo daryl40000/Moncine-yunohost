@@ -237,6 +237,101 @@ final class NotificationService
         $this->sendUserEmail($inviteeId, $title, $body, $link);
     }
 
+    public function notifyLoanRequested(int $ownerUserId, int $requesterUserId, string $filmTitle): void
+    {
+        if (!self::isAvailable() || $ownerUserId <= 0 || $requesterUserId <= 0) {
+            return;
+        }
+        $requester = (new UtilisateurRepository())->findById($requesterUserId);
+        if ($requester === null) {
+            return;
+        }
+        $label = View::userDisplayName($requester);
+        $filmTitle = trim($filmTitle) !== '' ? trim($filmTitle) : 'un film';
+        $title = 'Demande de prêt';
+        $body = $label . ' souhaite vous emprunter « ' . $filmTitle . ' ».';
+        $link = '/mes-prets.php';
+
+        $this->repo->insert($ownerUserId, NotificationRepository::KIND_LOAN_REQUEST, $title, $body, $link);
+        $this->sendUserEmail($ownerUserId, $title, $body, $link);
+    }
+
+    public function notifyLoanAccepted(int $requesterUserId, int $ownerUserId, string $filmTitle): void
+    {
+        if (!self::isAvailable() || $requesterUserId <= 0 || $ownerUserId <= 0) {
+            return;
+        }
+        $owner = (new UtilisateurRepository())->findById($ownerUserId);
+        if ($owner === null) {
+            return;
+        }
+        $label = View::userDisplayName($owner);
+        $filmTitle = trim($filmTitle) !== '' ? trim($filmTitle) : 'un film';
+        $title = 'Prêt accepté (réservé)';
+        $body = $label . ' a accepté votre demande pour « ' . $filmTitle . ' » (film réservé).';
+        $link = View::userProfileUrl($ownerUserId);
+
+        $this->repo->insert($requesterUserId, NotificationRepository::KIND_LOAN_ACCEPTED, $title, $body, $link);
+        $this->sendUserEmail($requesterUserId, $title, $body, $link);
+    }
+
+    public function notifyLoanDeclined(int $requesterUserId, int $ownerUserId, string $filmTitle): void
+    {
+        if (!self::isAvailable() || $requesterUserId <= 0 || $ownerUserId <= 0) {
+            return;
+        }
+        $owner = (new UtilisateurRepository())->findById($ownerUserId);
+        if ($owner === null) {
+            return;
+        }
+        $label = View::userDisplayName($owner);
+        $filmTitle = trim($filmTitle) !== '' ? trim($filmTitle) : 'un film';
+        $title = 'Prêt refusé';
+        $body = $label . ' a refusé votre demande pour « ' . $filmTitle . ' ».';
+        $link = View::userProfileUrl($ownerUserId);
+
+        $this->repo->insert($requesterUserId, NotificationRepository::KIND_LOAN_DECLINED, $title, $body, $link);
+        $this->sendUserEmail($requesterUserId, $title, $body, $link);
+    }
+
+    public function notifyLoanLent(int $requesterUserId, int $ownerUserId, string $filmTitle): void
+    {
+        if (!self::isAvailable() || $requesterUserId <= 0 || $ownerUserId <= 0) {
+            return;
+        }
+        $owner = (new UtilisateurRepository())->findById($ownerUserId);
+        if ($owner === null) {
+            return;
+        }
+        $label = View::userDisplayName($owner);
+        $filmTitle = trim($filmTitle) !== '' ? trim($filmTitle) : 'un film';
+        $title = 'Prêt validé';
+        $body = $label . ' a enregistré le prêt de « ' . $filmTitle . ' ».';
+        $link = '/mes-prets.php';
+
+        $this->repo->insert($requesterUserId, NotificationRepository::KIND_LOAN_LENT, $title, $body, $link);
+        $this->sendUserEmail($requesterUserId, $title, $body, $link);
+    }
+
+    public function notifyLoanReturned(int $requesterUserId, int $ownerUserId, string $filmTitle): void
+    {
+        if (!self::isAvailable() || $requesterUserId <= 0 || $ownerUserId <= 0) {
+            return;
+        }
+        $owner = (new UtilisateurRepository())->findById($ownerUserId);
+        if ($owner === null) {
+            return;
+        }
+        $label = View::userDisplayName($owner);
+        $filmTitle = trim($filmTitle) !== '' ? trim($filmTitle) : 'un film';
+        $title = 'Retour enregistré';
+        $body = $label . ' a marqué comme rendu « ' . $filmTitle . ' ».';
+        $link = '/mes-prets.php';
+
+        $this->repo->insert($requesterUserId, NotificationRepository::KIND_LOAN_RETURNED, $title, $body, $link);
+        $this->sendUserEmail($requesterUserId, $title, $body, $link);
+    }
+
     private function sendUserEmail(int $userId, string $subject, string $body, string $path): void
     {
         $user = (new UtilisateurRepository())->findById($userId);

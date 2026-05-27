@@ -175,6 +175,7 @@ final class UtilisateurRepository
                 $this->db->rollBack();
             }
 
+            error_log('Moncine createFirstAdmin failed: ' . $e->getMessage());
             return 'Création du compte impossible.';
         }
     }

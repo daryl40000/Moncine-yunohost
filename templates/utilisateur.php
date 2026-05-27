@@ -15,6 +15,8 @@
  * @var int $targetUserId
  * @var string $sortBy
  * @var string $sortDir
+ * @var int $viewerId
+ * @var bool $areFriends
  */
 ?>
 <section class="account-page social-profile-page">
@@ -25,6 +27,16 @@
             <a href="/mes-amis.php">← Mes amis</a>
         </p>
     <?php elseif ($listMode !== ''): ?>
+        <?php if (!empty($_GET['pret'])): ?>
+            <?php if ((string) $_GET['pret'] === 'demande'): ?>
+                <p class="alert alert-success">Demande de prêt envoyée.</p>
+            <?php elseif ((string) $_GET['pret'] === 'annule'): ?>
+                <p class="alert alert-success">Demande de prêt annulée.</p>
+            <?php endif; ?>
+        <?php endif; ?>
+        <?php if (!empty($_GET['pret_erreur'])): ?>
+            <p class="alert alert-warning"><?= Moncine\View::escape((string) $_GET['pret_erreur']) ?></p>
+        <?php endif; ?>
         <p class="breadcrumb">
             <a href="<?= Moncine\View::escape(Moncine\View::userProfileUrl($targetUserId)) ?>">
                 <?= Moncine\View::escape(Moncine\UserProfile::displayName($profileUser)) ?>
