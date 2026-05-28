@@ -126,6 +126,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                         '/catalogue.php',
                         '/soumissions-catalogue.php',
                         '/maintenance-catalogue.php',
+                        '/maintenance-medias.php',
                         '/foyers.php',
                         '/utilisateurs.php',
                     ];
@@ -141,6 +142,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                                 </a>
                             <?php endif; ?>
                             <a href="/maintenance-catalogue.php" class="site-nav__admin"<?= $currentPath === '/maintenance-catalogue.php' ? ' aria-current="page"' : '' ?>>Maintenance</a>
+                            <a href="/maintenance-medias.php" class="site-nav__admin"<?= $currentPath === '/maintenance-medias.php' ? ' aria-current="page"' : '' ?>>Médias</a>
                             <a href="/foyers.php" class="site-nav__admin"<?= $currentPath === '/foyers.php' ? ' aria-current="page"' : '' ?>>Groupes famille</a>
                             <a href="/utilisateurs.php" class="site-nav__admin"<?= $currentPath === '/utilisateurs.php' ? ' aria-current="page"' : '' ?>>Comptes utilisateurs</a>
                         </div>

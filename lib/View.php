@@ -38,6 +38,7 @@ final class View
             'catalogue',
             'oeuvre',
             'maintenance-catalogue',
+            'maintenance-medias',
         ], true);
     }
 

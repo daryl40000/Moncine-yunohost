@@ -1,6 +1,6 @@
 # Moncine
 
-**Version : 0.8.8**
+**Version : 0.9.0**
 
 **Auteur :** Stéphane MATER  
 **Licence :** [GNU General Public License v3.0 ou ultérieure](LICENSE) (GPL-3.0-or-later)
@@ -9,11 +9,13 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 
 ---
 
-## Fonctionnalités actuelles (v0.8)
+## Fonctionnalités actuelles (v0.9)
 
 | Domaine | Disponible |
 |---------|------------|
-| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), quiz |
+| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), **questionnaire du soir** (tirage + notes en session) |
+| Prêts | Demandes entre amis, réservation, validation et retour (`/mes-prets.php`) |
+| Stockage médias | Fichiers volumineux hors `www/` (`MONCINE_MEDIA_PATH`, admin **Gestion → Médias**) |
 | Foyers & famille | Collection partagée par foyer ; envies et historique personnels |
 | Catalogue partagé | Fiches œuvres, enrichissement TMDB / OMDB, affiches |
 | Comptes | Connexion, rôles admin/utilisateur, gestion des comptes |
@@ -46,7 +48,7 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 - ~~Recherche acteur/réalisateur sur tout le catalogue~~ (v0.8.7)
 - ~~Suite cibles d’achat (partage visiteur + « J’ai acheté » avec choix de version)~~ (v0.8.8) — comparateur de prix reporté
 - ~~Prêts entre utilisateurs (phase 8)~~ (v0.8.9)
-- Stockage fichiers (dossier share YunoHost + S3)
+- ~~Stockage fichiers (racine `MONCINE_MEDIA_PATH`, hors www)~~ (v0.9.0)
 - Export PDF
 - Mes BD
 - Collections de magazines
@@ -69,7 +71,10 @@ Détail : [ROADMAP.md](ROADMAP.md). Historique des versions : [CHANGELOG.md](CHA
 | `www/*.php` | Une page = un fichier (contrôleur léger) |
 | `www/partage.php` | Liste partagée visiteur (lecture seule, sans compte) |
 | `www/gerer-partages.php` | Création / révocation des liens de partage |
+| `www/quiz.php` / `www/resultat.php` | Questionnaire du soir et proposition de film |
 | `templates/*.php` | HTML affiché (via `View::render`) |
+
+Questionnaire du soir : [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md).
 
 ---
 
@@ -114,6 +119,7 @@ Ouvrir http://localhost:8080 — à la première visite, créez le **compte admi
 | Variable | Rôle |
 |----------|------|
 | `MONCINE_DATA_PATH` | Dossier des données (base SQLite, clés API, affiches). Par défaut : `./data/` |
+| `MONCINE_MEDIA_PATH` | Racine des fichiers volumineux (PDF, exports…). Par défaut : `./data/media/` |
 | `MONCINE_BASE_URL` | URL publique de l’app (liens dans les e-mails de réinitialisation de mot de passe) |
 
 ---
@@ -128,7 +134,8 @@ Ouvrir http://localhost:8080 — à la première visite, créez le **compte admi
 
 Les membres d’un même foyer voient la **même collection** ; chacun garde **ses envies** et **son historique**.
 
-Documentation mots de passe : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md).
+- Documentation mots de passe : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md)
+- Documentation questionnaire : [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md)
 
 ---
 
@@ -152,6 +159,8 @@ Les fichiers dans `sql/migrations_legacy/` ne sont **pas** appliqués (historiqu
 | **v0.8.6** | Accueil (vignettes), bouton profil, partage lien e-mail / Bluesky (aucune migration SQL) |
 | **v0.8.7** | Recherche personnes sur le catalogue + statut bibliothèque (aucune migration SQL) |
 | **v0.8.8** | Phase 7 bis : partage visiteur des cibles d’achat, « J’ai acheté » avec choix de version, EAN chiffres seuls (`025`) |
+| **v0.8.9** | Prêts entre amis (`018`, `026`) |
+| **v0.9.0** | Stockage médias local (`019_stored_objects`), page `/maintenance-medias.php` ; UX proposition questionnaire (`/resultat.php`) |
 
 ---
 

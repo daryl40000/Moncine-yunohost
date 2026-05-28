@@ -20,6 +20,7 @@
                 Détectez les doublons, fusionnez les fiches, nettoyez les affiches orphelines
                 et consultez le journal des actions admin.
             </p>
+            <p class="hint"><a href="/maintenance-medias.php">Stockage médias (PDF, exports…) →</a></p>
         </div>
     </div>
 

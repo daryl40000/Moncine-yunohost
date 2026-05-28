@@ -7,6 +7,22 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.9.0] — 2026-05-28
+
+Phase **9** — stockage de fichiers volumineux hors `www/`. Amélioration de l’usage du **questionnaire du soir**.
+
+### Ajouté
+
+- **Racine médias** : variable `MONCINE_MEDIA_PATH` (défaut `data/media/`) + surcharge admin en base.
+- **Sous-dossiers** : `objects/`, `magazines/`, `books/`, `exports/`, `tmp/` créés automatiquement.
+- **ObjectStorage** : interface + backend filesystem local ; table `stored_objects` (migration `019`).
+- **Admin** : page `/maintenance-medias.php` (config racine, création dossiers, test lecture/écriture).
+- **Lecture sécurisée** : `/media-object.php?id=…` (admin, streaming PHP — pas d’URL publique directe).
+
+### Amélioré
+
+- **Questionnaire du soir** (`/resultat.php`) : barre d’actions en haut de chaque proposition (boutons de note **Non**, **Bof**, **Pourquoi pas**, etc. + **Autre tirage** + lien vers les mieux notés) ; suppression du texte récapitulatif des critères en tête de page. Voir [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md).
+
 ## [0.8.9] — 2026-05-27
 
 Phase **8** (prêts entre amis) + correctifs installation locale.

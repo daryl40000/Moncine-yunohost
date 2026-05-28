@@ -25,6 +25,14 @@ define('MONCINE_DATA', $dataPath);
 
 define('MONCINE_DB_FILE', MONCINE_DATA . '/moncine.db');
 
+// Racine des médias volumineux (PDF magazines, livres, exports…) — hors www/.
+// Sous-dossiers créés par Moncine : objects/, magazines/, books/, exports/, tmp/, …
+$mediaPath = getenv('MONCINE_MEDIA_PATH');
+if ($mediaPath === false || $mediaPath === '') {
+    $mediaPath = MONCINE_DATA . '/media';
+}
+define('MONCINE_MEDIA_PATH', rtrim($mediaPath, '/\\'));
+
 // Graine d’installation (CSV catalogue + ZIP affiches) — voir install_seed/README.md
 define('MONCINE_INSTALL_SEED_PACKAGE_DIR', MONCINE_ROOT . '/install_seed');
 define('MONCINE_INSTALL_SEED_DATA_DIR', MONCINE_DATA . '/install_seed');

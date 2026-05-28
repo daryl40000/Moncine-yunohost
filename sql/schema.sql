@@ -330,3 +330,16 @@ CREATE INDEX IF NOT EXISTS idx_loan_requests_owner_status
 
 CREATE INDEX IF NOT EXISTS idx_loan_requests_requester_status
     ON loan_requests(requester_user_id, status, requested_at DESC);
+
+CREATE TABLE IF NOT EXISTS stored_objects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    backend TEXT NOT NULL DEFAULT 'local' CHECK (backend IN ('local')),
+    relative_path TEXT NOT NULL,
+    mime TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size_bytes INTEGER NOT NULL DEFAULT 0,
+    checksum TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stored_objects_path ON stored_objects(relative_path);
+CREATE INDEX IF NOT EXISTS idx_stored_objects_backend ON stored_objects(backend);

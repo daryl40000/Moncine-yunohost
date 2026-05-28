@@ -518,6 +518,43 @@ textarea {
     margin: 0;
 }
 
+.result-proposal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.result-proposal-toolbar .rating-block {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    flex: 1 1 12rem;
+}
+
+.result-proposal-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.result-proposal-toolbar__actions .inline-form {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .result-proposal-toolbar__actions {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
 .hint.recap {
     margin-bottom: 1rem;
     padding: 0.75rem 1rem;

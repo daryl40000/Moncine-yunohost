@@ -12,31 +12,6 @@
         <p class="alert alert-warning"><?= Moncine\View::escape((string) $_GET['vu_error']) ?></p>
     <?php endif; ?>
 
-    <?php if ($hasSession ?? false): ?>
-        <p class="hint recap">
-            Mêmes critères que votre questionnaire.
-            <?php if (!empty($contentKindLabel)): ?>
-                Type : <strong><?= Moncine\View::escape($contentKindLabel) ?></strong>.
-            <?php endif; ?>
-            <?php if (!empty($dureeFilmLabel)): ?>
-                Durée : <strong><?= Moncine\View::escape($dureeFilmLabel) ?></strong>.
-            <?php endif; ?>
-            <?php if (!empty($decennieLabel)): ?>
-                Décennie : <strong><?= Moncine\View::escape($decennieLabel) ?></strong>.
-            <?php endif; ?>
-            <?php if (!empty($nationalitesLabel)): ?>
-                Pays : <strong><?= Moncine\View::escape($nationalitesLabel) ?></strong>.
-            <?php endif; ?>
-            Notez chaque proposition, puis « Autre tirage » ou consultez vos <strong>mieux notés</strong>.
-        </p>
-    <?php endif; ?>
-
-    <?php if ($hasRatings ?? false): ?>
-        <p class="meilleurs-cta">
-            <a href="/meilleurs.php" class="btn btn-accent">Voir les mieux notés</a>
-        </p>
-    <?php endif; ?>
-
     <?php if ($pick === null): ?>
         <div class="alert alert-warning">
             <?php if ($noMoreFilms ?? false): ?>
@@ -63,6 +38,21 @@
         $filmId = (int) $film['id'];
         $returnPage = 'resultat';
         ?>
+        <div class="result-proposal-toolbar">
+            <?php require MONCINE_ROOT . '/templates/_notes_form.php'; ?>
+            <div class="result-proposal-toolbar__actions">
+                <form method="post" action="/resultat.php" class="inline-form">
+                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                    <input type="hidden" name="action" value="retirage">
+                    <input type="hidden" name="exclude_film_id" value="<?= $filmId ?>">
+                    <button type="submit" class="btn btn-secondary">Autre tirage</button>
+                </form>
+                <?php if ($hasRatings ?? false): ?>
+                    <a href="/meilleurs.php" class="btn btn-accent">Voir les mieux notés</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <?php $posterSrc = Moncine\View::posterSrc($film['poster_url'] ?? null); ?>
         <article class="film-card film-card--featured<?= $posterSrc !== '' ? ' film-card--with-poster' : '' ?>">
             <?php if ($posterSrc !== ''): ?>
@@ -98,8 +88,6 @@
                 <?php endif; ?>
             </ul>
 
-            <?php require MONCINE_ROOT . '/templates/_notes_form.php'; ?>
-
             <?php if (!empty($film['synopsis'])): ?>
                 <p class="film-synopsis"><?= Moncine\View::escape($film['synopsis']) ?></p>
             <?php endif; ?>
@@ -118,15 +106,6 @@
         </article>
 
         <div class="result-actions">
-            <form method="post" action="/resultat.php" class="inline-form">
-                <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
-                <input type="hidden" name="action" value="retirage">
-                <input type="hidden" name="exclude_film_id" value="<?= $filmId ?>">
-                <button type="submit" class="btn btn-secondary">Autre tirage</button>
-            </form>
-            <?php if ($hasRatings ?? false): ?>
-                <a href="/meilleurs.php" class="btn btn-accent">Voir les mieux notés</a>
-            <?php endif; ?>
             <a href="/quiz.php?reset=1" class="btn btn-primary">Refaire la sélection</a>
             <a href="/" class="btn btn-ghost">Accueil</a>
         </div>
