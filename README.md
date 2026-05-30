@@ -1,6 +1,6 @@
 # Moncine
 
-**Version : 0.9.2**
+**Version : 0.8.8**
 
 **Auteur :** Stéphane MATER  
 **Licence :** [GNU General Public License v3.0 ou ultérieure](LICENSE) (GPL-3.0-or-later)
@@ -9,13 +9,11 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 
 ---
 
-## Fonctionnalités actuelles (v0.9)
+## Fonctionnalités actuelles (v0.8)
 
 | Domaine | Disponible |
 |---------|------------|
-| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), **questionnaire du soir**, **listes imprimables** (PDF via le navigateur) |
-| Prêts | Demandes entre amis, réservation, validation et retour (`/mes-prets.php`) |
-| Stockage médias | Fichiers volumineux hors `www/` (`MONCINE_MEDIA_PATH`, admin **Gestion → Médias**) |
+| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), quiz |
 | Foyers & famille | Collection partagée par foyer ; envies et historique personnels |
 | Catalogue partagé | Fiches œuvres, enrichissement TMDB / OMDB, affiches |
 | Comptes | Connexion, rôles admin/utilisateur, gestion des comptes |
@@ -47,10 +45,9 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 - ~~Accueil vignettes, bouton profil, partage e-mail / Bluesky~~ (v0.8.6)
 - ~~Recherche acteur/réalisateur sur tout le catalogue~~ (v0.8.7)
 - ~~Suite cibles d’achat (partage visiteur + « J’ai acheté » avec choix de version)~~ (v0.8.8) — comparateur de prix reporté
-- ~~Prêts entre utilisateurs (phase 8)~~ (v0.8.9)
-- ~~Stockage fichiers (racine `MONCINE_MEDIA_PATH`, hors www)~~ (v0.9.0)
-- ~~Listes imprimables Mes films / Mes envies~~ (v0.9.1) — alternative à l’export PDF serveur
-- Export PDF serveur (phase 10, optionnel plus tard)
+- Prêts entre utilisateurs (phase 8)
+- Stockage fichiers (dossier share YunoHost + S3)
+- Export PDF
 - Mes BD
 - Collections de magazines
 - Magazines PDF & lecteur intégré
@@ -72,11 +69,7 @@ Détail : [ROADMAP.md](ROADMAP.md). Historique des versions : [CHANGELOG.md](CHA
 | `www/*.php` | Une page = un fichier (contrôleur léger) |
 | `www/partage.php` | Liste partagée visiteur (lecture seule, sans compte) |
 | `www/gerer-partages.php` | Création / révocation des liens de partage |
-| `www/quiz.php` / `www/resultat.php` | Questionnaire du soir et proposition de film |
-| `www/imprimer-films.php` / `www/imprimer-envies.php` | Listes imprimables (Mes films / Mes envies) |
 | `templates/*.php` | HTML affiché (via `View::render`) |
-
-Documentation : [questionnaire du soir](doc/questionnaire-du-soir.md) · [listes imprimables](doc/listes-imprimables.md).
 
 ---
 
@@ -121,7 +114,6 @@ Ouvrir http://localhost:8080 — à la première visite, créez le **compte admi
 | Variable | Rôle |
 |----------|------|
 | `MONCINE_DATA_PATH` | Dossier des données (base SQLite, clés API, affiches). Par défaut : `./data/` |
-| `MONCINE_MEDIA_PATH` | Racine des fichiers volumineux (PDF, exports…). Par défaut : `./data/media/` |
 | `MONCINE_BASE_URL` | URL publique de l’app (liens dans les e-mails de réinitialisation de mot de passe) |
 
 ---
@@ -136,9 +128,7 @@ Ouvrir http://localhost:8080 — à la première visite, créez le **compte admi
 
 Les membres d’un même foyer voient la **même collection** ; chacun garde **ses envies** et **son historique**.
 
-- Documentation mots de passe : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md)
-- Documentation questionnaire : [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md)
-- Listes imprimables : [doc/listes-imprimables.md](doc/listes-imprimables.md)
+Documentation mots de passe : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md).
 
 ---
 
@@ -162,9 +152,6 @@ Les fichiers dans `sql/migrations_legacy/` ne sont **pas** appliqués (historiqu
 | **v0.8.6** | Accueil (vignettes), bouton profil, partage lien e-mail / Bluesky (aucune migration SQL) |
 | **v0.8.7** | Recherche personnes sur le catalogue + statut bibliothèque (aucune migration SQL) |
 | **v0.8.8** | Phase 7 bis : partage visiteur des cibles d’achat, « J’ai acheté » avec choix de version, EAN chiffres seuls (`025`) |
-| **v0.8.9** | Prêts entre amis (`018`, `026`) |
-| **v0.9.0** | Stockage médias local (`019_stored_objects`), page `/maintenance-medias.php` ; UX proposition questionnaire (`/resultat.php`) |
-| **v0.9.1** | Listes imprimables `/imprimer-films.php`, `/imprimer-envies.php` (aucune migration SQL) |
 
 ---
 
@@ -182,6 +169,5 @@ composer test
 
 - **Export** : page `/export.php` (CSV collection, envies, historique)
 - **Import** : page `/import.php` (bibliothèque ou catalogue admin)
-- **Impression** : bouton **Version imprimable** sur Mes films et Mes envies → PDF via le navigateur ([doc/listes-imprimables.md](doc/listes-imprimables.md))
 
 Les affiches locales sont stockées dans `data/posters/` (ou le dossier défini par `MONCINE_DATA_PATH`).

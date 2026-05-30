@@ -1,6 +1,6 @@
 <?php
 /**
- * Limite les tentatives de connexion (protection contre le devinage de mot de passe).
+ * Limite les tentatives de connexion (session + IP serveur).
  */
 
 declare(strict_types=1);
@@ -9,46 +9,35 @@ namespace Moncine;
 
 final class LoginThrottle
 {
+    private const SCOPE = 'login';
+
     private const SESSION_KEY = 'moncine_login_throttle';
 
-    /** Nombre d’échecs avant blocage temporaire. */
     private const MAX_ATTEMPTS = 8;
 
-    /** Fenêtre de comptage des échecs (secondes). */
+    private const MAX_ATTEMPTS_PER_IP = 24;
+
     private const WINDOW_SECONDS = 900;
 
-    /** Durée du blocage après dépassement (secondes). */
     private const LOCKOUT_SECONDS = 900;
+
+    private static ?LockoutThrottleStore $store = null;
 
     public static function isBlocked(string $email): bool
     {
-        $entry = self::getEntry($email);
-        if ($entry === null) {
-            return false;
-        }
+        $email = self::normalizeEmail($email);
 
-        $lockedUntil = (int) ($entry['locked_until'] ?? 0);
-        if ($lockedUntil > time()) {
-            return true;
-        }
-
-        if ($lockedUntil > 0 && $lockedUntil <= time()) {
-            self::clear($email);
-        }
-
-        return false;
+        return $email !== '' && self::store()->isBlocked(self::bucketKey($email));
     }
 
     public static function secondsUntilUnblock(string $email): int
     {
-        $entry = self::getEntry($email);
-        if ($entry === null) {
+        $email = self::normalizeEmail($email);
+        if ($email === '') {
             return 0;
         }
-        $lockedUntil = (int) ($entry['locked_until'] ?? 0);
-        $remaining = $lockedUntil - time();
 
-        return $remaining > 0 ? $remaining : 0;
+        return self::store()->secondsUntilUnblock(self::bucketKey($email));
     }
 
     public static function recordFailure(string $email): void
@@ -58,58 +47,37 @@ final class LoginThrottle
             return;
         }
 
-        QuizSession::start();
-        $key = self::storageKey($email);
-        $now = time();
-        $entry = self::getEntry($email) ?? ['attempts' => [], 'locked_until' => 0];
-
-        $attempts = is_array($entry['attempts'] ?? null) ? $entry['attempts'] : [];
-        $attempts[] = $now;
-        $attempts = array_values(array_filter(
-            $attempts,
-            static fn (int $ts): bool => $ts >= $now - self::WINDOW_SECONDS
-        ));
-
-        if (count($attempts) >= self::MAX_ATTEMPTS) {
-            $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
-            $attempts = [];
-        } else {
-            $entry['locked_until'] = 0;
-        }
-
-        $entry['attempts'] = $attempts;
-        $_SESSION[self::SESSION_KEY][$key] = $entry;
+        self::store()->recordAttempt(self::bucketKey($email));
     }
 
     public static function clearOnSuccess(string $email): void
     {
-        self::clear($email);
-    }
-
-    private static function clear(string $email): void
-    {
-        QuizSession::start();
-        $key = self::storageKey(self::normalizeEmail($email));
-        unset($_SESSION[self::SESSION_KEY][$key]);
-    }
-
-    /** @return array{attempts?: list<int>, locked_until?: int}|null */
-    private static function getEntry(string $email): ?array
-    {
         $email = self::normalizeEmail($email);
         if ($email === '') {
-            return null;
+            return;
         }
 
+        self::store()->clear(self::bucketKey($email));
+    }
+
+    public static function resetForTests(): void
+    {
         QuizSession::start();
-        $bucket = $_SESSION[self::SESSION_KEY] ?? null;
-        if (!is_array($bucket)) {
-            return null;
-        }
+        unset($_SESSION[self::SESSION_KEY]);
+        LockoutThrottleStore::resetScopeForTests(self::SCOPE);
+        self::$store = null;
+    }
 
-        $entry = $bucket[self::storageKey($email)] ?? null;
-
-        return is_array($entry) ? $entry : null;
+    private static function store(): LockoutThrottleStore
+    {
+        return self::$store ??= new LockoutThrottleStore(
+            self::SCOPE,
+            self::SESSION_KEY,
+            self::MAX_ATTEMPTS,
+            self::WINDOW_SECONDS,
+            self::LOCKOUT_SECONDS,
+            self::MAX_ATTEMPTS_PER_IP
+        );
     }
 
     private static function normalizeEmail(string $email): string
@@ -117,10 +85,8 @@ final class LoginThrottle
         return mb_strtolower(trim($email), 'UTF-8');
     }
 
-    private static function storageKey(string $email): string
+    private static function bucketKey(string $email): string
     {
-        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-
-        return hash('sha256', $email . '|' . $ip);
+        return hash('sha256', $email . '|' . RequestClientIp::resolve());
     }
 }

@@ -1,11 +1,29 @@
 <?php
 /** @var string $error */
 /** @var string $redirect */
+/** @var bool $registrationEnabled */
+/** @var bool $flashRegistered */
+/** @var bool $flashConfirmed */
+/** @var bool $flashPendingAdmin */
 ?>
 <section class="auth-page">
     <h1>Connexion</h1>
     <p class="lead">Connectez-vous pour accéder à votre dvdthèque.</p>
 
+    <?php if ($flashRegistered): ?>
+        <p class="alert alert-success">
+            Si votre demande est valide, un e-mail de confirmation vous a été envoyé.
+            Cliquez sur le lien dans ce message pour poursuivre l’inscription.
+        </p>
+    <?php endif; ?>
+    <?php if ($flashConfirmed): ?>
+        <p class="alert alert-success">Votre compte est prêt. Connectez-vous ci-dessous.</p>
+    <?php endif; ?>
+    <?php if ($flashPendingAdmin): ?>
+        <p class="alert alert-success">
+            Votre e-mail est confirmé. Un administrateur doit encore valider votre compte.
+        </p>
+    <?php endif; ?>
     <?php if ($error !== ''): ?>
         <p class="alert alert-warning"><?= Moncine\View::escape($error) ?></p>
     <?php endif; ?>
@@ -26,5 +44,10 @@
         <button type="submit" class="btn btn-primary">Se connecter</button>
     </form>
 
-    <p class="hint"><a href="/mot-de-passe-oublie.php">Mot de passe oublié ?</a></p>
+    <p class="hint">
+        <a href="/mot-de-passe-oublie.php">Mot de passe oublié ?</a>
+        <?php if ($registrationEnabled): ?>
+            · <a href="/inscription.php">Créer un compte</a>
+        <?php endif; ?>
+    </p>
 </section>

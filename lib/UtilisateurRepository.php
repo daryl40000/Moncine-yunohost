@@ -142,6 +142,55 @@ final class UtilisateurRepository
     }
 
     /**
+     * Crée un compte avec un hash déjà calculé (inscription confirmée par e-mail).
+     *
+     * @return int|string
+     */
+    public function createWithPasswordHash(
+        string $nom,
+        string $email,
+        string $passwordHash,
+        string $role = UserRole::USER,
+        string $prenom = '',
+        string $pseudo = ''
+    ): int|string {
+        $nom = trim($nom);
+        $prenom = trim($prenom);
+        $pseudo = UserProfile::sanitizePseudo($pseudo);
+        $email = mb_strtolower(trim($email), 'UTF-8');
+        $role = UserRole::normalize($role);
+        $passwordHash = trim($passwordHash);
+
+        $identity = UserProfile::validateIdentityFields($nom, $prenom, $pseudo);
+        if ($identity !== true) {
+            return $identity;
+        }
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return 'Adresse e-mail invalide.';
+        }
+        if ($passwordHash === '') {
+            return 'Mot de passe invalide.';
+        }
+        if ($this->findByEmail($email) !== null) {
+            return 'Cette adresse e-mail est déjà utilisée.';
+        }
+
+        $this->db->prepare(
+            'INSERT INTO utilisateurs (nom, prenom, pseudo, email, password_hash, role, actif, foyer_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, 1, NULL, datetime(\'now\'))'
+        )->execute([
+            $nom,
+            $prenom,
+            $pseudo,
+            $email,
+            $passwordHash,
+            $role,
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
      * Premier compte administrateur (installation).
      *
      * @return int|string ID utilisateur ou message d’erreur

@@ -84,6 +84,32 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash
 CREATE INDEX IF NOT EXISTS idx_password_reset_expires
     ON password_reset_tokens(expires_at);
 
+CREATE TABLE IF NOT EXISTS inscription_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    nom TEXT NOT NULL DEFAULT '',
+    prenom TEXT NOT NULL DEFAULT '',
+    pseudo TEXT NOT NULL DEFAULT '',
+    password_hash TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending_email'
+        CHECK (status IN ('pending_email', 'pending_admin', 'approved', 'rejected')),
+    confirm_token_hash TEXT NOT NULL DEFAULT '',
+    confirm_expires_at TEXT NOT NULL,
+    email_confirmed_at TEXT DEFAULT NULL,
+    user_id INTEGER DEFAULT NULL REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    reviewed_by INTEGER DEFAULT NULL REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    review_note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inscription_requests_email_active
+    ON inscription_requests(LOWER(TRIM(email)))
+    WHERE status IN ('pending_email', 'pending_admin');
+
+CREATE INDEX IF NOT EXISTS idx_inscription_requests_status
+    ON inscription_requests(status);
+
 CREATE TABLE IF NOT EXISTS oeuvres (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     titre TEXT NOT NULL,

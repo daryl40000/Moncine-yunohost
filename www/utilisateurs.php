@@ -10,6 +10,8 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 use Moncine\Auth;
 use Moncine\Csrf;
 use Moncine\FoyerRepository;
+use Moncine\RegistrationService;
+use Moncine\RegistrationSettings;
 use Moncine\UserRole;
 use Moncine\UtilisateurRepository;
 use Moncine\View;
@@ -25,7 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::rejectUnlessValid($_POST, '/utilisateurs.php');
     $action = (string) ($_POST['action'] ?? '');
 
-    if ($action === 'create') {
+    if ($action === 'set_registration_mode' && RegistrationService::isAvailable()) {
+        (new RegistrationSettings())->setMode((string) ($_POST['registration_mode'] ?? ''));
+        $success = 'Réglage d’inscription enregistré.';
+    } elseif ($action === 'create') {
         $result = $repo->create(
             (string) ($_POST['nom'] ?? ''),
             (string) ($_POST['email'] ?? ''),
@@ -89,6 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$registrationSettings = RegistrationService::isAvailable() ? new RegistrationSettings() : null;
+$registrationService = RegistrationService::isAvailable() ? new RegistrationService() : null;
+
 View::render('utilisateurs', [
     'pageTitle' => 'Comptes utilisateurs',
     'users' => $repo->listAll(),
@@ -96,4 +104,6 @@ View::render('utilisateurs', [
     'error' => $error,
     'success' => $success,
     'currentUserId' => Auth::currentUserId(),
+    'registrationSettings' => $registrationSettings,
+    'pendingRegistrations' => $registrationService !== null ? $registrationService->countPendingAdmin() : 0,
 ]);

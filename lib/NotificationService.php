@@ -103,6 +103,47 @@ final class NotificationService
         }
     }
 
+    /** Notifie les administrateurs d’une inscription confirmée par e-mail, en attente de validation. */
+    public function notifyAdminsRegistrationPending(
+        int $requestId,
+        string $applicantLabel,
+        string $applicantEmail
+    ): void {
+        if (!self::isAvailable() || !RegistrationService::isAvailable()) {
+            return;
+        }
+
+        $link = '/demandes-inscription.php?id=' . $requestId;
+        $title = 'Inscription à valider';
+        $body = $applicantLabel . ' (' . $applicantEmail . ') a confirmé son e-mail.';
+
+        foreach ((new UtilisateurRepository())->listActiveAdmins() as $admin) {
+            $adminId = (int) ($admin['id'] ?? 0);
+            if ($adminId <= 0) {
+                continue;
+            }
+
+            $this->repo->insert(
+                $adminId,
+                NotificationRepository::KIND_REGISTRATION_PENDING,
+                $title,
+                $body,
+                $link
+            );
+
+            $email = trim((string) ($admin['email'] ?? ''));
+            if ($email !== '') {
+                MailService::sendRegistrationPendingToAdmin(
+                    $email,
+                    View::userDisplayName($admin),
+                    $applicantLabel,
+                    $applicantEmail,
+                    AppUrl::path('/demandes-inscription.php')
+                );
+            }
+        }
+    }
+
     public function notifyUserSubmissionApproved(
         int $userId,
         int $submissionId,

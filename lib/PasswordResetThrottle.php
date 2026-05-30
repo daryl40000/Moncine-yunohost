@@ -1,6 +1,6 @@
 <?php
 /**
- * Limite les demandes « mot de passe oublié » (anti-abus / spam).
+ * Limite les demandes « mot de passe oublié » (session + IP serveur).
  */
 
 declare(strict_types=1);
@@ -9,31 +9,25 @@ namespace Moncine;
 
 final class PasswordResetThrottle
 {
+    private const SCOPE = 'password_reset';
+
     private const SESSION_KEY = 'moncine_password_reset_throttle';
 
     private const MAX_ATTEMPTS = 5;
+
+    private const MAX_ATTEMPTS_PER_IP = 15;
 
     private const WINDOW_SECONDS = 900;
 
     private const LOCKOUT_SECONDS = 900;
 
+    private static ?LockoutThrottleStore $store = null;
+
     public static function isBlocked(string $email): bool
     {
-        $entry = self::getEntry($email);
-        if ($entry === null) {
-            return false;
-        }
+        $email = self::normalizeEmail($email);
 
-        $lockedUntil = (int) ($entry['locked_until'] ?? 0);
-        if ($lockedUntil > time()) {
-            return true;
-        }
-
-        if ($lockedUntil > 0 && $lockedUntil <= time()) {
-            self::clear($email);
-        }
-
-        return false;
+        return $email !== '' && self::store()->isBlocked(self::bucketKey($email));
     }
 
     public static function recordAttempt(string $email): void
@@ -43,51 +37,27 @@ final class PasswordResetThrottle
             return;
         }
 
-        QuizSession::start();
-        $now = time();
-        $entry = self::getEntry($email) ?? ['attempts' => [], 'locked_until' => 0];
-
-        $attempts = is_array($entry['attempts'] ?? null) ? $entry['attempts'] : [];
-        $attempts[] = $now;
-        $attempts = array_values(array_filter(
-            $attempts,
-            static fn (int $ts): bool => $ts >= $now - self::WINDOW_SECONDS
-        ));
-
-        if (count($attempts) >= self::MAX_ATTEMPTS) {
-            $entry['locked_until'] = $now + self::LOCKOUT_SECONDS;
-            $entry['attempts'] = [];
-        } else {
-            $entry['locked_until'] = 0;
-            $entry['attempts'] = $attempts;
-        }
-
-        $_SESSION[self::SESSION_KEY][self::storageKey($email)] = $entry;
+        self::store()->recordAttempt(self::bucketKey($email));
     }
 
-    /** @return array{attempts?: list<int>, locked_until?: int}|null */
-    private static function getEntry(string $email): ?array
+    public static function resetForTests(): void
     {
-        $email = self::normalizeEmail($email);
-        if ($email === '') {
-            return null;
-        }
-
         QuizSession::start();
-        $bucket = $_SESSION[self::SESSION_KEY] ?? null;
-        if (!is_array($bucket)) {
-            return null;
-        }
-
-        $entry = $bucket[self::storageKey($email)] ?? null;
-
-        return is_array($entry) ? $entry : null;
+        unset($_SESSION[self::SESSION_KEY]);
+        LockoutThrottleStore::resetScopeForTests(self::SCOPE);
+        self::$store = null;
     }
 
-    private static function clear(string $email): void
+    private static function store(): LockoutThrottleStore
     {
-        QuizSession::start();
-        unset($_SESSION[self::SESSION_KEY][self::storageKey(self::normalizeEmail($email))]);
+        return self::$store ??= new LockoutThrottleStore(
+            self::SCOPE,
+            self::SESSION_KEY,
+            self::MAX_ATTEMPTS,
+            self::WINDOW_SECONDS,
+            self::LOCKOUT_SECONDS,
+            self::MAX_ATTEMPTS_PER_IP
+        );
     }
 
     private static function normalizeEmail(string $email): string
@@ -95,10 +65,8 @@ final class PasswordResetThrottle
         return mb_strtolower(trim($email), 'UTF-8');
     }
 
-    private static function storageKey(string $email): string
+    private static function bucketKey(string $email): string
     {
-        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-
-        return hash('sha256', 'reset|' . $email . '|' . $ip);
+        return hash('sha256', 'reset|' . $email . '|' . RequestClientIp::resolve());
     }
 }

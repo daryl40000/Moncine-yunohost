@@ -11,6 +11,8 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Auth;
 use Moncine\Csrf;
+use Moncine\RegistrationService;
+use Moncine\RegistrationSettings;
 use Moncine\SafeRedirect;
 use Moncine\View;
 
@@ -44,9 +46,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = is_string($result) ? $result : 'Connexion impossible.';
 }
 
+$registrationEnabled = RegistrationService::isAvailable()
+    && (new RegistrationSettings())->isPublicRegistrationEnabled();
+
 View::render('connexion', [
     'pageTitle' => 'Connexion',
     'error' => $error,
     'redirect' => trim((string) ($_GET['redirect'] ?? $_POST['redirect'] ?? '')),
+    'registrationEnabled' => $registrationEnabled,
+    'flashRegistered' => isset($_GET['registered']) && (string) $_GET['registered'] === '1',
+    'flashConfirmed' => isset($_GET['confirmed']) && (string) $_GET['confirmed'] === '1',
+    'flashPendingAdmin' => isset($_GET['pending_admin']) && (string) $_GET['pending_admin'] === '1',
     'layout' => false,
 ]);

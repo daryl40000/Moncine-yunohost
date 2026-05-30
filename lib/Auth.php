@@ -18,6 +18,8 @@ final class Auth
     private const PUBLIC_PATHS = [
         '/connexion.php',
         '/premier-compte.php',
+        '/inscription.php',
+        '/confirmer-inscription.php',
         '/deconnexion.php',
         '/mot-de-passe-oublie.php',
         '/reinitialiser-mot-de-passe.php',

@@ -12,6 +12,77 @@ namespace Moncine;
 
 final class MailService
 {
+    public static function sendRegistrationConfirm(string $toEmail, string $nom, string $confirmUrl): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Confirmez votre inscription';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Pour finaliser votre inscription sur " . $app . ", ouvrez le lien ci-dessous "
+            . "(valable 48 heures), puis cliquez sur le bouton de confirmation sur la page :\n\n"
+            . $confirmUrl . "\n\n"
+            . "Si vous n’avez pas demandé ce compte, ignorez ce message.\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendRegistrationAwaitingAdmin(string $toEmail, string $nom): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Inscription en attente de validation';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Votre adresse e-mail est confirmée. Un administrateur doit encore approuver votre compte "
+            . "sur " . $app . ". Vous recevrez un message lorsque vous pourrez vous connecter.\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendRegistrationAccountReady(string $toEmail, string $nom): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $loginUrl = AppUrl::path('/connexion.php');
+        $subject = $app . ' — Votre compte est prêt';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Votre compte sur " . $app . " est actif. Connectez-vous avec l’e-mail et le mot de passe "
+            . "que vous avez choisis à l’inscription :\n\n"
+            . $loginUrl . "\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendRegistrationRejected(string $toEmail, string $nom, string $reviewNote = ''): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Demande d’inscription refusée';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Votre demande d’inscription sur " . $app . " n’a pas été acceptée.";
+        if (trim($reviewNote) !== '') {
+            $body .= "\n\nMessage de l’administrateur : " . trim($reviewNote);
+        }
+        $body .= "\n\n— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendRegistrationPendingToAdmin(
+        string $toEmail,
+        string $adminName,
+        string $applicantLabel,
+        string $applicantEmail,
+        string $reviewUrl
+    ): bool {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Nouvelle inscription à valider';
+        $body = "Bonjour " . $adminName . ",\n\n"
+            . $applicantLabel . " (" . $applicantEmail . ") a confirmé son e-mail et attend votre validation.\n\n"
+            . "Traiter les demandes :\n" . $reviewUrl . "\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
     public static function sendPasswordReset(string $toEmail, string $nom, string $resetUrl): bool
     {
         $app = MONCINE_APP_NAME;

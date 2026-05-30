@@ -22,6 +22,7 @@ final class NotificationRepository
     public const KIND_LOAN_DECLINED = 'loan_request_declined';
     public const KIND_LOAN_LENT = 'loan_lent';
     public const KIND_LOAN_RETURNED = 'loan_returned';
+    public const KIND_REGISTRATION_PENDING = 'registration_pending';
 
     private PDO $db;
 

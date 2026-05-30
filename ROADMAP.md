@@ -22,8 +22,8 @@ Fonctionnalités métier visées :
 3. **Groupes « famille » / foyer** : créés **par les utilisateurs** (amis qui s’associent), avec bibliothèque partagée — **remplace** la gestion admin des foyers (phase 4)
 4. ~~**Partage visiteur**~~ — **livré v0.8.0** : lien URL en **lecture seule** vers **Mes films** et **Mes envies** (fiche film consultable, aucune modification)
 5. **Prêts** : savoir quoi a été prêté, à qui, quand, et le retour
-6. **Stockage de fichiers** volumineux (PDF magazines, etc.) : dossier partagé type YunoHost avec **racine unique** configurable (`MONCINE_MEDIA_PATH`) et sous-dossiers gérés par Moncine
-7. ~~**Export / impression listes**~~ — **livré v0.9.1** : pages imprimables Mes films / Mes envies (PDF via le navigateur) ; export PDF **serveur** (phase 10) reporté
+6. **Stockage de fichiers** volumineux (PDF magazines, etc.) : dossier partagé type YunoHost + option **stockage objet S3**
+7. **Export PDF** de la bibliothèque / des envies
 8. Page **Mes BD** (collection + wishlist)
 9. ~~**Soumissions** au catalogue~~ — **livré v0.7.4** (propositions, validation admin, notifications)
 10. ~~**EAN multiples par œuvre** (catalogue)~~ — **livré v0.8.0** : un code-barres par édition / support (DVD, Blu-ray, 4K…) — socle pour **recherche d’achat** ultérieure
@@ -37,9 +37,9 @@ Fonctionnalités métier visées :
 
 ## État actuel
 
-**Version applicative : 0.9.1**
+**Version applicative : 0.8.8**
 
-Application PHP + SQLite, déployable en local ou sur un serveur web classique (YunoHost : sans dépendance PDF serveur).
+Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 
 ### Déjà en place
 
@@ -68,16 +68,12 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique (
 | **UX accueil & partage (v0.8.6)** | Vignettes accueil, bouton profil, partage lien e-mail / Bluesky |
 | **Recherche personnes catalogue (v0.8.7)** | `/personnes.php` sur tout le catalogue, statut collection / envies |
 | **Suite cibles d’achat (v0.8.8)** | Partage visiteur des versions recherchées ; « J’ai acheté » ; EAN normalisés ; UX liste envies compacte |
-| **Prêts (v0.8.9)** | Demandes entre amis, réservation, validation, retour — `/mes-prets.php` |
-| **Stockage médias (v0.9.0)** | `MONCINE_MEDIA_PATH`, `stored_objects`, `/maintenance-medias.php` |
-| **Questionnaire du soir (v0.9.0)** | UX proposition `/resultat.php` (notes + Autre tirage en haut) |
-| **Listes imprimables (v0.9.1)** | `/imprimer-films.php`, `/imprimer-envies.php`, `print-page.js` — [doc/listes-imprimables.md](doc/listes-imprimables.md) |
-| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `019`, `023`–`026` |
-| **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications, stockage médias) |
+| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024`, `025` |
+| **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
 
 ### Point d’étape — mai 2026
 
-**Version actuelle : 0.9.1.** Stockage fichiers hors `www/`, prêts entre amis, listes **imprimables** (alternative phase 10 sans Dompdf). **Export PDF serveur (phase 10)** et **comparateur de prix (7 bis.2)** reportés. Prochaine évolution majeure suggérée : **phase 11** (Mes BD).
+**Version actuelle : 0.8.8.** Partage visiteur des versions recherchées et « J’ai acheté » avec choix de version. **Comparateur de prix (7 bis.2) reporté.** Prochaine évolution majeure : **phase 8** (prêts).
 
 | Version | Contenu principal |
 |---------|-------------------|
@@ -98,9 +94,6 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique (
 | 0.8.6 | Accueil vignettes, profil en un clic, partage lien e-mail / Bluesky |
 | 0.8.7 | Recherche personnes sur le catalogue + badges bibliothèque |
 | 0.8.8 | Phase 7 bis : partage visiteur cibles, « J’ai acheté » (liste déroulante), EAN chiffres seuls (`025`) |
-| 0.8.9 | Prêts entre amis (`018`, `026`) |
-| 0.9.0 | Stockage médias (`019`), maintenance médias, UX questionnaire |
-| 0.9.1 | Listes imprimables Mes films / Mes envies (aucune migration SQL) |
 
 ### Prochaines étapes
 
@@ -116,9 +109,9 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique (
 | Cibles d’achat — envies (support + EAN) | ✅ Livré (v0.8.2) |
 | Profil public utilisateur (social) | ✅ Livré (v0.8.3) |
 | Phase 7 bis — Suite cibles d’achat (envies) | **Partielle** (sans comparateur prix) |
-| Phase 8 — Prêts entre utilisateurs | ✅ Livré (v0.8.9) |
-| Phase 9 — Stockage fichiers (local) | **Livré v0.9.0** |
-| Phase 10 — Export PDF serveur | Reportée — **alternative livrée** : listes imprimables **v0.9.1** |
+| Phase 8 — Prêts entre utilisateurs | À faire |
+| Phase 9 — Stockage fichiers (local + S3) | À faire |
+| Phase 10 — Export PDF | À faire |
 | Phase 11 — Mes BD | À faire |
 | Phase 12 — Collections de magazines | À faire |
 | Phase 13 — Magazines PDF & lecteur | À faire |
@@ -216,7 +209,7 @@ friendships          -- liens amis (prérequis pour créer ou rejoindre un group
 catalogue_soumissions
 notifications          -- alertes in-app (soumissions catalogue, etc.)
 loans                -- prêts d’exemplaires (phase 7)
-stored_objects       -- métadonnées fichiers (stockage local, hors www/) (phase 9)
+stored_objects       -- métadonnées fichiers (chemin local ou clé S3) (phase 8)
 share_links          -- jetons URL partagée lecture seule (phase 9)
 magazine_collections -- titres / séries de magazines (phase 11)
 magazine_numeros     -- numéros rattachés à une collection (phase 11)
@@ -717,12 +710,9 @@ flowchart LR
 
 ---
 
-## Phase 9 — Stockage de fichiers (dossier partagé) — **livré v0.9.0**
+## Phase 9 — Stockage de fichiers (dossier partagé & S3)
 
-**Objectif :** stocker les **fichiers volumineux** (PDF magazines, etc.) hors `www/`, avec un dossier personnalisable type **YunoHost**.
-
-Le serveur peut gérer S3 en amont si besoin (montage, sync, etc.), mais **Moncine ne gère que du stockage local**.
-On configure une **racine unique** `MONCINE_MEDIA_PATH`, puis Moncine crée et utilise ses **sous-dossiers** (magazines, livres, exports, …).
+**Objectif :** stocker les **fichiers volumineux** (PDF magazines, etc.) hors `www/`, avec un dossier personnalisable type **YunoHost** et une option **stockage objet S3** (MinIO, Scaleway, AWS, B2…) pour des volumes économiques.
 
 **Dépend de :** phase 1 (configuration instance). **Prérequis** pour la phase 13 (PDF magazines).
 
@@ -738,13 +728,15 @@ On configure une **racine unique** `MONCINE_MEDIA_PATH`, puis Moncine crée et u
 | Variable | Exemple | Rôle |
 |----------|---------|------|
 | `MONCINE_DATA_PATH` | `…/data` | SQLite, clés API |
-| `MONCINE_MEDIA_PATH` | `/home/yunohost.multimedia/share/moncine` | Racine médias (unique) |
+| `MONCINE_MEDIA_PATH` | `/home/yunohost.multimedia/share/moncine` | Racine médias |
+| `MONCINE_STORAGE_BACKEND` | `local` ou `s3` | Moteur |
+| `MONCINE_S3_*` | endpoint, bucket, clés | Si S3 |
 
 ### Migrations SQL prévues
 
 ```text
 019_stored_objects.sql
-  - stored_objects (backend local, path, mime, size_bytes, checksum, …)
+  - stored_objects (backend local|s3, path_or_key, mime, size_bytes, checksum, …)
   - app_metadata : chemins et mode de stockage
 ```
 
@@ -752,36 +744,23 @@ On configure une **racine unique** `MONCINE_MEDIA_PATH`, puis Moncine crée et u
 |---|--------|
 | 9.1 | Interface **`ObjectStorage`** (put, get, delete, stream) |
 | 9.2 | Backend **filesystem local** (`MONCINE_MEDIA_PATH`) |
-| 9.3 | Création/gestion des **sous-dossiers** (ex. `magazines/`, `books/`, `exports/`) |
-| 9.4 | Page/admin de config : définir la **racine unique** + test écriture/lecture |
+| 9.3 | Backend **S3-compatible** |
+| 9.4 | Config admin : local vs S3, test de connexion |
 | 9.5 | Doc déploiement YunoHost (droits, backup du share) |
 | 9.6 | Lecture des fichiers **via PHP** (pas d’URL publique directe) |
 
-**Critère terminé :** un dossier share configurable (`MONCINE_MEDIA_PATH`) ; le code métier ne dépend plus d’un chemin fixe sous `www/`.
+**Critère terminé :** dossier share ou bucket S3 configurable ; le code métier ne dépend plus d’un chemin fixe sous `www/`.
 
 ### Points d’attention (phase 9)
 
-- **Droits Unix** : le serveur web doit pouvoir écrire dans `MONCINE_MEDIA_PATH`.
-- **Backup** : inclure `MONCINE_MEDIA_PATH` dans la stratégie de sauvegarde.
+- **Coût** : S3 économique en volume ; lifecycle pour archives froides.
+- **Backup** : inclure share local et bucket dans la stratégie de sauvegarde.
 
 ---
 
-## Phase 10 — Export PDF serveur — **reportée** (alternative **livrée v0.9.1**)
+## Phase 10 — Export PDF
 
-### Alternative livrée (v0.9.1) — listes imprimables ✅
-
-| # | Tâche | Statut |
-|---|--------|--------|
-| 10 alt.1 | Bouton **Version imprimable** sur Mes films et Mes envies | ✅ |
-| 10 alt.2 | Pages `/imprimer-films.php`, `/imprimer-envies.php` (filtres / tri identiques) | ✅ |
-| 10 alt.3 | Mise en page impression (`print.css`) + PDF via navigateur | ✅ |
-| 10 alt.4 | Script `print-page.js` (compatible CSP, pas d’`onclick` inline) | ✅ |
-
-**Critère couvert :** l’utilisateur obtient une liste imprimable ou un PDF **sans dépendance PHP** (compatible YunoHost). Doc : [doc/listes-imprimables.md](doc/listes-imprimables.md).
-
-### Export PDF côté serveur (non livré — optionnel)
-
-**Objectif initial (si besoin plus tard) :** téléchargement direct d’un fichier PDF généré par Moncine (Dompdf / mPDF — dépendances Composer et extensions PHP).
+**Objectif :** permettre d’**exporter en PDF** la bibliothèque et la wishlist depuis **Mes films** et **Mes envies** (utilisateur connecté).
 
 **Dépend de :** phases 2, 4 et **7** (mêmes périmètres de données que le partage visiteur).
 
@@ -878,17 +857,18 @@ Aucune table obligatoire (génération à la volée). Option : métadonnée `app
 
 | # | Tâche |
 |---|--------|
-| 13.1 | Upload PDF → `stored_objects` (local) |
+| 13.1 | Upload PDF → `stored_objects` (local ou S3) |
 | 13.2 | Fiche numéro : lien « Lire le PDF » |
 | 13.3 | Lecteur PDF (streaming via ObjectStorage) |
 | 13.4 | Contrôle d’accès (foyer ; pas d’URL publique vers le binaire) |
 | 13.5 | Quotas espace disque / bucket |
-| 13.6 | Doc sauvegarde share YunoHost (`MONCINE_MEDIA_PATH`) |
+| 13.6 | Doc sauvegarde share YunoHost et bucket S3 |
 
-**Critère terminé :** PDF consultable depuis Moncine ; fichier sous `MONCINE_MEDIA_PATH`, pas sous `www/`.
+**Critère terminé :** PDF consultable depuis Moncine ; fichier sous `MONCINE_MEDIA_PATH` ou S3, pas sous `www/`.
 
 ### Points d’attention (phase 13)
 
+- **Volume** : S3 adapté aux gros catalogues PDF.
 - **Droits d’auteur** : usage personnel / foyer uniquement.
 - **Performance** : streaming par pages.
 
@@ -934,8 +914,8 @@ Fonctionnalité transversale déjà partiellement en place :
 | EAN catalogue | Table `oeuvre_eans` (oeuvre + support + ean unique) ; socle recherche d’achat (phase 6 bis) |
 | Partage visiteur | Jeton hashé, scope collection\|wishlist, pages GET lecture seule (phase 7) |
 | Prêts | Table `loans` liée à `bibliotheque` (phase 8) |
-| Stockage fichiers | `MONCINE_MEDIA_PATH` (local, racine unique) (phase 9) |
-| Export / impression listes | Listes imprimables v0.9.1 ; PDF serveur optionnel (phase 10) |
+| Stockage fichiers | `MONCINE_MEDIA_PATH` + backends `local` / `s3` (phase 9) |
+| Export PDF | PDF généré côté serveur (phase 10) |
 | Magazines | Collections + numéros (phase 12) ; PDF via ObjectStorage (phase 13) |
 | Chemins données | `MONCINE_DATA_PATH` (SQLite, clés) ; `MONCINE_MEDIA_PATH` (objets, affiches) |
 

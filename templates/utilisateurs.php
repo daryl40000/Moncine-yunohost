@@ -5,14 +5,55 @@
  * @var string $error
  * @var string $success
  * @var int $currentUserId
+ * @var \Moncine\RegistrationSettings|null $registrationSettings
+ * @var int $pendingRegistrations
  */
+
+use Moncine\RegistrationSettings;
+use Moncine\RegistrationService;
 ?>
 <section class="users-admin-page">
     <h1>Comptes utilisateurs</h1>
     <p class="lead">
         Les groupes famille sont gérés par les utilisateurs (<strong>Mes amis</strong>, <strong>Mon groupe famille</strong>).
         Consultation des groupes : <a href="/foyers.php">Groupes famille</a>.
+        <?php if (RegistrationService::isAvailable() && $pendingRegistrations > 0): ?>
+            — <a href="/demandes-inscription.php">Inscriptions à valider (<?= (int) $pendingRegistrations ?>)</a>
+        <?php endif; ?>
     </p>
+
+    <?php if ($registrationSettings !== null): ?>
+        <details class="catalog-admin-panel">
+            <summary class="catalog-admin-panel__summary">Inscription publique</summary>
+            <div class="catalog-admin-panel__body">
+                <form method="post" action="/utilisateurs.php" class="import-form">
+                    <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                    <input type="hidden" name="action" value="set_registration_mode">
+                    <label for="registration_mode">Qui peut créer un compte ?</label>
+                    <select name="registration_mode" id="registration_mode">
+                        <?php
+                        $currentMode = $registrationSettings->getMode();
+                        foreach (RegistrationSettings::modeLabels() as $value => $label):
+                            ?>
+                            <option value="<?= Moncine\View::escape($value) ?>"<?= $currentMode === $value ? ' selected' : '' ?>>
+                                <?= Moncine\View::escape($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="hint">
+                        Dans tous les cas, l’utilisateur doit confirmer son e-mail.
+                        Une seule demande active par adresse e-mail.
+                    </p>
+                    <button type="submit" class="btn btn-primary">Enregistrer le réglage</button>
+                </form>
+                <?php if ($pendingRegistrations > 0): ?>
+                    <p><a href="/demandes-inscription.php" class="btn btn-secondary">
+                        Voir les demandes en attente (<?= (int) $pendingRegistrations ?>)
+                    </a></p>
+                <?php endif; ?>
+            </div>
+        </details>
+    <?php endif; ?>
 
     <?php if ($success !== ''): ?>
         <p class="alert alert-success"><?= Moncine\View::escape($success) ?></p>

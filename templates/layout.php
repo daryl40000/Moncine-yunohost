@@ -9,6 +9,9 @@ $canProposeToCatalog = $submissionsAvailable && !$isAdminCatalog;
 $pendingSubmissions = $isAdminCatalog && $submissionsAvailable
     ? (new Moncine\CatalogSubmission())->countPending()
     : 0;
+$pendingRegistrations = $isAdminCatalog && Moncine\RegistrationService::isAvailable()
+    ? (new Moncine\RegistrationService())->countPendingAdmin()
+    : 0;
 $currentUserId = Auth::currentUserId();
 $notificationsAvailable = NotificationService::isAvailable() && $currentUserId > 0;
 $unreadNotifications = $notificationsAvailable
@@ -125,6 +128,7 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                     $gestionPaths = [
                         '/catalogue.php',
                         '/soumissions-catalogue.php',
+                        '/demandes-inscription.php',
                         '/maintenance-catalogue.php',
                         '/maintenance-medias.php',
                         '/foyers.php',
@@ -139,6 +143,11 @@ $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
                             <?php if ($submissionsAvailable): ?>
                                 <a href="/soumissions-catalogue.php" class="site-nav__admin"<?= $currentPath === '/soumissions-catalogue.php' ? ' aria-current="page"' : '' ?>>
                                     Soumissions<?= $pendingSubmissions > 0 ? ' (' . (int) $pendingSubmissions . ')' : '' ?>
+                                </a>
+                            <?php endif; ?>
+                            <?php if (Moncine\RegistrationService::isAvailable()): ?>
+                                <a href="/demandes-inscription.php" class="site-nav__admin"<?= $currentPath === '/demandes-inscription.php' ? ' aria-current="page"' : '' ?>>
+                                    Inscriptions<?= $pendingRegistrations > 0 ? ' (' . (int) $pendingRegistrations . ')' : '' ?>
                                 </a>
                             <?php endif; ?>
                             <a href="/maintenance-catalogue.php" class="site-nav__admin"<?= $currentPath === '/maintenance-catalogue.php' ? ' aria-current="page"' : '' ?>>Maintenance</a>
