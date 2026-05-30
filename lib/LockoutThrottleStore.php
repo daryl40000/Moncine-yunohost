@@ -103,9 +103,10 @@ final class LockoutThrottleStore
 
         $attempts = is_array($entry['attempts'] ?? null) ? $entry['attempts'] : [];
         $attempts[] = $now;
+        $windowSeconds = $this->windowSeconds;
         $attempts = array_values(array_filter(
             $attempts,
-            static fn (int $ts): bool => $ts >= $now - $this->windowSeconds
+            static fn (int $ts): bool => $ts >= $now - $windowSeconds
         ));
 
         if (count($attempts) >= $maxAttempts) {
@@ -127,9 +128,10 @@ final class LockoutThrottleStore
         }
 
         $attempts = is_array($entry['attempts'] ?? null) ? $entry['attempts'] : [];
+        $windowSeconds = $this->windowSeconds;
         $attempts = array_values(array_filter(
             $attempts,
-            static fn (int $ts): bool => $ts >= $now - $this->windowSeconds
+            static fn (int $ts): bool => $ts >= $now - $windowSeconds
         ));
 
         return [

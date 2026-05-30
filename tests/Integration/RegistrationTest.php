@@ -88,6 +88,59 @@ final class RegistrationTest extends MoncineTestCase
         $this->assertTrue(Auth::login('pending@test.local', 'TestPass123!') === true);
     }
 
+    public function testInsertDuplicateActiveEmailReturnsMessageNotException(): void
+    {
+        $hash = UtilisateurRepository::hashPassword('TestPass123!');
+        $this->assertNotNull($hash);
+        $expires = gmdate('Y-m-d H:i:s', time() + InscriptionRequestRepository::CONFIRM_TTL_SECONDS);
+        $repo = new InscriptionRequestRepository();
+
+        $this->assertTrue($repo->insertPendingEmail(
+            'Once',
+            '',
+            '',
+            'dup@test.local',
+            $hash,
+            hash('sha256', 'token1'),
+            $expires
+        ) === true);
+
+        $second = $repo->insertPendingEmail(
+            'Twice',
+            '',
+            '',
+            'dup@test.local',
+            $hash,
+            hash('sha256', 'token2'),
+            $expires
+        );
+        $this->assertIsString($second);
+        $this->assertStringContainsString('déjà en cours', $second);
+    }
+
+    public function testSubmitTreatsInsertRaceAsNeutralSuccess(): void
+    {
+        $this->loginAsAdmin();
+        (new RegistrationSettings())->setMode(RegistrationSettings::MODE_OPEN);
+        Auth::logout();
+
+        $hash = UtilisateurRepository::hashPassword('TestPass123!');
+        $this->assertNotNull($hash);
+        $repo = new InscriptionRequestRepository();
+        $repo->insertPendingEmail(
+            'Race',
+            '',
+            '',
+            'race@test.local',
+            $hash,
+            hash('sha256', 'x'),
+            gmdate('Y-m-d H:i:s', time() + InscriptionRequestRepository::CONFIRM_TTL_SECONDS)
+        );
+
+        $service = new RegistrationService();
+        $this->assertTrue($service->submitRequest('Race', 'race@test.local', 'TestPass123!') === true);
+    }
+
     public function testOnlyOneActiveRequestPerEmail(): void
     {
         $this->loginAsAdmin();

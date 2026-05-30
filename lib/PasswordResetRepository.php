@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Moncine;
 
 use PDO;
+use PDOException;
 
 final class PasswordResetRepository
 {
@@ -34,13 +35,19 @@ final class PasswordResetRepository
         $hash = hash('sha256', $plain);
         $expires = gmdate('Y-m-d H:i:s', time() + self::TOKEN_TTL_SECONDS);
 
-        $this->db->prepare(
-            'DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL'
-        )->execute([$userId]);
+        try {
+            $this->db->prepare(
+                'DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL'
+            )->execute([$userId]);
 
-        $this->db->prepare(
-            'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
-        )->execute([$userId, $hash, $expires]);
+            $this->db->prepare(
+                'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
+            )->execute([$userId, $hash, $expires]);
+        } catch (PDOException $e) {
+            error_log('Moncine password_reset_tokens INSERT: ' . $e->getMessage());
+
+            return null;
+        }
 
         return $plain;
     }

@@ -85,6 +85,11 @@ final class RegistrationService
             $expires
         );
         if ($insert !== true) {
+            // Course entre deux requêtes ou doublon : même comportement neutre que plus haut (sans second e-mail).
+            if ($this->requests->hasActiveRequestForEmail($email)) {
+                return true;
+            }
+
             return (string) $insert;
         }
 

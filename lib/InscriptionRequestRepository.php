@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Moncine;
 
 use PDO;
+use PDOException;
 
 final class InscriptionRequestRepository
 {
@@ -123,23 +124,40 @@ final class InscriptionRequestRepository
             return 'Adresse e-mail invalide.';
         }
 
-        $this->db->prepare(
-            'INSERT INTO inscription_requests (
-                email, nom, prenom, pseudo, password_hash, status,
-                confirm_token_hash, confirm_expires_at, created_at
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(\'now\'))'
-        )->execute([
-            $email,
-            trim($nom),
-            trim($prenom),
-            UserProfile::sanitizePseudo($pseudo),
-            $passwordHash,
-            self::STATUS_PENDING_EMAIL,
-            $confirmTokenHash,
-            $confirmExpiresAt,
-        ]);
+        try {
+            $this->db->prepare(
+                'INSERT INTO inscription_requests (
+                    email, nom, prenom, pseudo, password_hash, status,
+                    confirm_token_hash, confirm_expires_at, created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(\'now\'))'
+            )->execute([
+                $email,
+                trim($nom),
+                trim($prenom),
+                UserProfile::sanitizePseudo($pseudo),
+                $passwordHash,
+                self::STATUS_PENDING_EMAIL,
+                $confirmTokenHash,
+                $confirmExpiresAt,
+            ]);
+        } catch (PDOException $e) {
+            if (self::isUniqueConstraintViolation($e)) {
+                return 'Une demande est déjà en cours pour cette adresse e-mail.';
+            }
+
+            error_log('Moncine inscription_requests INSERT: ' . $e->getMessage());
+
+            return 'Impossible d’enregistrer la demande. Réessayez dans quelques minutes.';
+        }
 
         return true;
+    }
+
+    private static function isUniqueConstraintViolation(PDOException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'unique constraint failed');
     }
 
     public function markEmailConfirmed(int $id, string $newStatus): bool

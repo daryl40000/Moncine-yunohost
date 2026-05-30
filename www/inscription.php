@@ -24,7 +24,7 @@ if (Auth::isLoggedIn()) {
 }
 
 $service = new RegistrationService();
-if (!$service->settings()->isPublicRegistrationEnabled()) {
+if (!RegistrationService::isAvailable() || !$service->settings()->isPublicRegistrationEnabled()) {
     header('Location: /connexion.php');
     exit;
 }
@@ -38,18 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== $confirm) {
         $error = 'Les deux mots de passe ne correspondent pas.';
     } else {
-    $result = $service->submitRequest(
-        (string) ($_POST['nom'] ?? ''),
-        (string) ($_POST['email'] ?? ''),
-        $password,
-        (string) ($_POST['prenom'] ?? ''),
-        (string) ($_POST['pseudo'] ?? '')
-    );
-    if ($result === true) {
-        header('Location: /connexion.php?registered=1');
-        exit;
-    }
-    $error = (string) $result;
+        $result = $service->submitRequest(
+            (string) ($_POST['nom'] ?? ''),
+            (string) ($_POST['email'] ?? ''),
+            $password,
+            (string) ($_POST['prenom'] ?? ''),
+            (string) ($_POST['pseudo'] ?? '')
+        );
+        if ($result === true) {
+            header('Location: /connexion.php?registered=1');
+            exit;
+        }
+        $error = (string) $result;
     }
 }
 
