@@ -13,18 +13,20 @@ final class RequestClientIp
     {
         $candidates = [];
 
-        $realIp = trim((string) ($_SERVER['HTTP_X_REAL_IP'] ?? ''));
-        if ($realIp !== '') {
-            $candidates[] = $realIp;
-        }
+        if (MONCINE_TRUST_PROXY) {
+            $realIp = trim((string) ($_SERVER['HTTP_X_REAL_IP'] ?? ''));
+            if ($realIp !== '') {
+                $candidates[] = $realIp;
+            }
 
-        $forwarded = trim((string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
-        if ($forwarded !== '') {
-            foreach (explode(',', $forwarded) as $part) {
-                $part = trim($part);
-                if ($part !== '') {
-                    $candidates[] = $part;
-                    break;
+            $forwarded = trim((string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+            if ($forwarded !== '') {
+                foreach (explode(',', $forwarded) as $part) {
+                    $part = trim($part);
+                    if ($part !== '') {
+                        $candidates[] = $part;
+                        break;
+                    }
                 }
             }
         }

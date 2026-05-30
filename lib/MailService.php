@@ -83,6 +83,34 @@ final class MailService
         return self::send($toEmail, $subject, $body);
     }
 
+    public static function sendEmailChangeConfirm(string $toEmail, string $nom, string $confirmUrl): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Confirmez votre nouvelle adresse e-mail';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Vous avez demandé à changer l’adresse e-mail de votre compte sur " . $app . ".\n"
+            . "Pour confirmer, ouvrez le lien ci-dessous (valable 1 heure) :\n\n"
+            . $confirmUrl . "\n\n"
+            . "Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
+    public static function sendEmailChangeNoticeOld(string $toEmail, string $nom, string $newEmail): bool
+    {
+        $app = MONCINE_APP_NAME;
+        $subject = $app . ' — Changement d’adresse e-mail demandé';
+        $body = "Bonjour " . $nom . ",\n\n"
+            . "Une demande de changement d’adresse e-mail a été enregistrée sur votre compte " . $app . ".\n"
+            . "Nouvelle adresse demandée : " . $newEmail . "\n\n"
+            . "La modification ne sera effective qu’après confirmation via un lien envoyé à cette nouvelle adresse.\n"
+            . "Si vous n’êtes pas à l’origine de cette demande, connectez-vous et changez votre mot de passe.\n\n"
+            . "— " . $app;
+
+        return self::send($toEmail, $subject, $body);
+    }
+
     public static function sendPasswordReset(string $toEmail, string $nom, string $resetUrl): bool
     {
         $app = MONCINE_APP_NAME;

@@ -18,7 +18,8 @@ final class InscriptionRequestRepository
     public const STATUS_REJECTED = 'rejected';
 
     /** Validité du lien de confirmation (secondes). */
-    public const CONFIRM_TTL_SECONDS = 172800;
+    /** 24 h (réduit l’exposition des données de demande en base). */
+    public const CONFIRM_TTL_SECONDS = 86400;
 
     private PDO $db;
 

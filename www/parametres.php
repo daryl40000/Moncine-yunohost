@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 
 use Moncine\Auth;
 use Moncine\Csrf;
+use Moncine\FamilyGroupService;
 use Moncine\FoyerRepository;
 use Moncine\UserProfile;
 use Moncine\UserRole;
@@ -40,10 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string) ($_POST['email'] ?? ''),
             (string) ($_POST['pseudo'] ?? ''),
             (string) ($_POST['ville'] ?? ''),
-            $searchable
+            $searchable,
+            (string) ($_POST['profile_password'] ?? '')
         );
         if ($result === true) {
             $success = 'Profil mis à jour.';
+            $user = $repo->findById($userId) ?? $user;
+        } elseif (is_string($result) && str_contains($result, 'lien de confirmation')) {
+            $success = $result;
             $user = $repo->findById($userId) ?? $user;
         } else {
             $error = (string) $result;
@@ -77,6 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $canDeleteAccount = !UserRole::isAdmin((string) ($user['role'] ?? ''));
+$isSoloGroupMember = false;
+if ($foyer !== null && $canDeleteAccount) {
+    $foyerId = (int) ($foyer['id'] ?? 0);
+    if ($foyerId > 0 && FamilyGroupService::isAvailable()) {
+        $db = \Moncine\Database::getInstance();
+        $stmt = $db->prepare('SELECT COUNT(*) FROM group_members WHERE foyer_id = ?');
+        $stmt->execute([$foyerId]);
+        $isSoloGroupMember = (int) $stmt->fetchColumn() === 1;
+    }
+}
 
 View::render('parametres', [
     'pageTitle' => 'Mon compte',
@@ -89,4 +104,5 @@ View::render('parametres', [
     'maxVilleLength' => UserProfile::MAX_VILLE_LENGTH,
     'isSearchable' => UserProfile::isSearchable($user),
     'canDeleteAccount' => $canDeleteAccount,
+    'isSoloGroupMember' => $isSoloGroupMember,
 ]);

@@ -16,6 +16,13 @@ final class SecurityHeaders
         '/partage-film.php',
     ];
 
+    /** Pages avec jeton sensible dans l’URL ou après redirection : ne pas fuiter le Referer. */
+    private const NO_REFERRER_PATHS = [
+        '/confirmer-inscription.php',
+        '/confirmer-email.php',
+        '/reinitialiser-mot-de-passe.php',
+    ];
+
     public static function send(): void
     {
         if (PHP_SAPI === 'cli' || headers_sent()) {
@@ -24,13 +31,17 @@ final class SecurityHeaders
 
         header('X-Frame-Options: SAMEORIGIN');
         header('X-Content-Type-Options: nosniff');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+
+        $path = self::currentPath();
+        header(
+            in_array($path, self::NO_REFERRER_PATHS, true)
+                ? 'Referrer-Policy: no-referrer'
+                : 'Referrer-Policy: strict-origin-when-cross-origin'
+        );
 
         self::sendContentSecurityPolicy();
         self::sendStrictTransportSecurityIfHttps();
-
-        $path = self::currentPath();
         if (in_array($path, self::SHARE_PATHS, true)) {
             self::sendShareVisitorHeaders();
         }

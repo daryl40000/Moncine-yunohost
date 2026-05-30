@@ -9,6 +9,7 @@
  * @var int $maxVilleLength
  * @var bool $isSearchable
  * @var bool $canDeleteAccount
+ * @var bool $isSoloGroupMember
  */
 $minLen = Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH;
 $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
@@ -67,6 +68,15 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
                 <label for="account_email">E-mail</label>
                 <input type="email" name="email" id="account_email" required autocomplete="email"
                        value="<?= Moncine\View::escape((string) ($user['email'] ?? '')) ?>">
+                <p class="hint">
+                    Si vous changez l’e-mail, un lien de confirmation sera envoyé à la <strong>nouvelle</strong> adresse
+                    et un message d’information à l’ancienne.
+                </p>
+
+                <label for="profile_password">Mot de passe actuel</label>
+                <input type="password" name="profile_password" id="profile_password" required
+                       autocomplete="current-password" maxlength="<?= $maxLen ?>">
+                <p class="hint">Obligatoire pour enregistrer le profil (surtout en cas de changement d’e-mail).</p>
 
                 <p class="hint">Rôle : <?= Moncine\View::escape(Moncine\UserRole::label((string) ($user['role'] ?? ''))) ?></p>
                 <?php if ($foyer !== null): ?>
@@ -109,7 +119,13 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
         <div class="catalog-admin-panel__body">
             <p class="hint">
                 Cette action est définitive : votre compte, vos envies personnelles et votre historique de vision
-                seront supprimés. Les films du groupe famille partagé ne sont pas supprimés pour les autres membres.
+                seront supprimés.
+                <?php if ($isSoloGroupMember): ?>
+                    Vous êtes le <strong>seul membre</strong> de votre groupe famille : la collection partagée
+                    de ce groupe sera également supprimée.
+                <?php else: ?>
+                    Les films du groupe famille partagé restent pour les autres membres (réattribués si besoin).
+                <?php endif; ?>
             </p>
             <form method="post" action="/parametres.php" class="import-form auth-form account-form"
                   onsubmit="return confirm('Supprimer définitivement votre compte ? Cette action est irréversible.');">

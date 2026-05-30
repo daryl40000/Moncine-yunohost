@@ -6,6 +6,7 @@
 /** @var bool $flashConfirmed */
 /** @var bool $flashPendingAdmin */
 /** @var bool $flashAccountDeleted */
+/** @var bool $flashEmailChanged */
 ?>
 <section class="auth-page">
     <h1>Connexion</h1>
@@ -27,6 +28,9 @@
     <?php endif; ?>
     <?php if ($flashAccountDeleted): ?>
         <p class="alert alert-success">Votre compte a été supprimé.</p>
+    <?php endif; ?>
+    <?php if ($flashEmailChanged): ?>
+        <p class="alert alert-success">Votre adresse e-mail a été mise à jour. Connectez-vous avec la nouvelle adresse.</p>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
         <p class="alert alert-warning"><?= Moncine\View::escape($error) ?></p>

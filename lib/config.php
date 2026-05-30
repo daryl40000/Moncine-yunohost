@@ -41,7 +41,14 @@ define('MONCINE_INSTALL_SEED_DATA_DIR', MONCINE_DATA . '/install_seed');
 define('MONCINE_APP_NAME', 'Moncine');
 
 // Version applicative (semver)
-define('MONCINE_PACKAGE_VERSION', '0.9.5');
+define('MONCINE_PACKAGE_VERSION', '0.9.6');
+
+// Derrière un reverse proxy de confiance (YunoHost / Nginx) : 1 pour utiliser X-Real-IP / X-Forwarded-For.
+$trustProxy = getenv('MONCINE_TRUST_PROXY');
+define(
+    'MONCINE_TRUST_PROXY',
+    $trustProxy !== false && in_array(strtolower(trim($trustProxy)), ['1', 'true', 'yes'], true)
+);
 
 // Repère affiché sur la page import (vérifier que le serveur a bien le dernier code).
 define('MONCINE_IMPORT_ENGINE_BUILD', '2026-05-18-library-oeuvre-first');

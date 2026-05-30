@@ -20,6 +20,7 @@ final class Auth
         '/premier-compte.php',
         '/inscription.php',
         '/confirmer-inscription.php',
+        '/confirmer-email.php',
         '/deconnexion.php',
         '/mot-de-passe-oublie.php',
         '/reinitialiser-mot-de-passe.php',

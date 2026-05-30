@@ -409,6 +409,21 @@ final class UtilisateurRepository
             return;
         }
 
+        $this->removeSoloFoyersForUser($userId);
+
+        if ($this->tableExists('email_change_requests')) {
+            (new EmailChangeRepository())->deleteForUser($userId);
+        }
+
+        if ($this->tableExists('share_links')) {
+            $this->db->prepare(
+                "UPDATE share_links SET revoked_at = datetime('now')
+                 WHERE user_id = ? AND revoked_at IS NULL"
+            )->execute([$userId]);
+        }
+
+        $this->db->prepare('UPDATE utilisateurs SET foyer_id = NULL WHERE id = ?')->execute([$userId]);
+
         if ($this->tableExists('catalog_admin_audit')) {
             $this->db->prepare('DELETE FROM catalog_admin_audit WHERE user_id = ?')->execute([$userId]);
         }
@@ -465,6 +480,42 @@ final class UtilisateurRepository
 
             $this->db->prepare('DELETE FROM historique WHERE film_id = ?')->execute([$bibId]);
             $this->db->prepare('DELETE FROM bibliotheque WHERE id = ?')->execute([$bibId]);
+        }
+    }
+
+    /** Supprime les foyers dont l’utilisateur est le seul membre (évite les foyers orphelins). */
+    private function removeSoloFoyersForUser(int $userId): void
+    {
+        if (!$this->tableExists('group_members') || !$this->tableExists('foyers')) {
+            return;
+        }
+
+        $stmt = $this->db->prepare('SELECT foyer_id FROM group_members WHERE user_id = ?');
+        $stmt->execute([$userId]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $foyerId) {
+            $foyerId = (int) $foyerId;
+            if ($foyerId <= 0) {
+                continue;
+            }
+
+            $countStmt = $this->db->prepare('SELECT COUNT(*) FROM group_members WHERE foyer_id = ?');
+            $countStmt->execute([$foyerId]);
+            if ((int) $countStmt->fetchColumn() !== 1) {
+                continue;
+            }
+
+            $this->db->prepare(
+                'DELETE FROM historique WHERE film_id IN (SELECT id FROM bibliotheque WHERE foyer_id = ?)'
+            )->execute([$foyerId]);
+            $this->db->prepare('DELETE FROM bibliotheque WHERE foyer_id = ?')->execute([$foyerId]);
+
+            if ($this->tableExists('group_invitations')) {
+                $this->db->prepare('DELETE FROM group_invitations WHERE foyer_id = ?')->execute([$foyerId]);
+            }
+
+            $this->db->prepare('DELETE FROM group_members WHERE foyer_id = ?')->execute([$foyerId]);
+            $this->db->prepare('DELETE FROM foyers WHERE id = ?')->execute([$foyerId]);
         }
     }
 
@@ -602,13 +653,48 @@ final class UtilisateurRepository
         string $email,
         string $pseudo = '',
         string $ville = '',
+        bool $searchable = true,
+        string $currentPassword = ''
+    ): bool|string {
+        $user = $this->findById($id);
+        if ($user === null) {
+            return 'Compte introuvable.';
+        }
+
+        $newEmail = mb_strtolower(trim($email), 'UTF-8');
+        $oldEmail = mb_strtolower(trim((string) ($user['email'] ?? '')), 'UTF-8');
+
+        if ($newEmail !== $oldEmail) {
+            return (new EmailChangeService())->requestChange(
+                $id,
+                $currentPassword,
+                $newEmail,
+                $nom,
+                $prenom,
+                $pseudo,
+                $ville,
+                $searchable
+            );
+        }
+
+        return $this->updateProfileWithoutEmail($id, $nom, $prenom, $pseudo, $ville, $searchable);
+    }
+
+    /**
+     * @return true|string
+     */
+    public function updateProfileWithoutEmail(
+        int $id,
+        string $nom,
+        string $prenom,
+        string $pseudo = '',
+        string $ville = '',
         bool $searchable = true
     ): bool|string {
         $nom = trim($nom);
         $prenom = trim($prenom);
         $pseudo = UserProfile::sanitizePseudo($pseudo);
         $ville = UserProfile::sanitizeVille($ville);
-        $email = mb_strtolower(trim($email), 'UTF-8');
 
         if ($id <= 0) {
             return 'Compte invalide.';
@@ -619,6 +705,23 @@ final class UtilisateurRepository
             return $identity;
         }
 
+        $stmt = $this->db->prepare(
+            'UPDATE utilisateurs SET nom = ?, prenom = ?, pseudo = ?, ville = ?, searchable = ? WHERE id = ?'
+        );
+        $stmt->execute([$nom, $prenom, $pseudo, $ville, $searchable ? 1 : 0, $id]);
+
+        return $stmt->rowCount() > 0 ? true : 'Compte introuvable.';
+    }
+
+    /**
+     * @return true|string
+     */
+    public function applyEmailChange(int $id, string $email): bool|string
+    {
+        $email = mb_strtolower(trim($email), 'UTF-8');
+        if ($id <= 0) {
+            return 'Compte invalide.';
+        }
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return 'Adresse e-mail invalide.';
         }
@@ -628,10 +731,8 @@ final class UtilisateurRepository
             return 'Cette adresse e-mail est déjà utilisée.';
         }
 
-        $stmt = $this->db->prepare(
-            'UPDATE utilisateurs SET nom = ?, prenom = ?, pseudo = ?, ville = ?, searchable = ?, email = ? WHERE id = ?'
-        );
-        $stmt->execute([$nom, $prenom, $pseudo, $ville, $searchable ? 1 : 0, $email, $id]);
+        $stmt = $this->db->prepare('UPDATE utilisateurs SET email = ? WHERE id = ?');
+        $stmt->execute([$email, $id]);
 
         return $stmt->rowCount() > 0 ? true : 'Compte introuvable.';
     }

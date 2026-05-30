@@ -80,7 +80,7 @@ final class RegistrationService
             $prenom,
             $pseudo,
             $email,
-            $hash,
+            RegistrationPasswordCipher::encryptHash($hash),
             $tokenHash,
             $expires
         );
@@ -255,10 +255,15 @@ final class RegistrationService
     /** @return int|string */
     private function createUserFromRequest(array $request): int|string
     {
+        $passwordHash = RegistrationPasswordCipher::decryptStored((string) ($request['password_hash'] ?? ''));
+        if ($passwordHash === null || $passwordHash === '') {
+            return 'Demande invalide ou expirée. Refaites une inscription si besoin.';
+        }
+
         $userId = $this->users->createWithPasswordHash(
             (string) ($request['nom'] ?? ''),
             (string) ($request['email'] ?? ''),
-            (string) ($request['password_hash'] ?? ''),
+            $passwordHash,
             UserRole::USER,
             (string) ($request['prenom'] ?? ''),
             (string) ($request['pseudo'] ?? '')

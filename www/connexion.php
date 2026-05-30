@@ -58,5 +58,6 @@ View::render('connexion', [
     'flashConfirmed' => isset($_GET['confirmed']) && (string) $_GET['confirmed'] === '1',
     'flashPendingAdmin' => isset($_GET['pending_admin']) && (string) $_GET['pending_admin'] === '1',
     'flashAccountDeleted' => isset($_GET['account_deleted']) && (string) $_GET['account_deleted'] === '1',
+    'flashEmailChanged' => isset($_GET['email_changed']) && (string) $_GET['email_changed'] === '1',
     'layout' => false,
 ]);
