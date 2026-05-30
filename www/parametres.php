@@ -11,6 +11,7 @@ use Moncine\Auth;
 use Moncine\Csrf;
 use Moncine\FoyerRepository;
 use Moncine\UserProfile;
+use Moncine\UserRole;
 use Moncine\UtilisateurRepository;
 use Moncine\View;
 
@@ -64,8 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = (string) $result;
             }
         }
+    } elseif ($action === 'delete_account') {
+        $result = $repo->deleteOwnAccount($userId, (string) ($_POST['current_password'] ?? ''));
+        if ($result === true) {
+            Auth::logout();
+            header('Location: /connexion.php?account_deleted=1');
+            exit;
+        }
+        $error = (string) $result;
     }
 }
+
+$canDeleteAccount = !UserRole::isAdmin((string) ($user['role'] ?? ''));
 
 View::render('parametres', [
     'pageTitle' => 'Mon compte',
@@ -77,4 +88,5 @@ View::render('parametres', [
     'maxPseudoLength' => UserProfile::MAX_PSEUDO_LENGTH,
     'maxVilleLength' => UserProfile::MAX_VILLE_LENGTH,
     'isSearchable' => UserProfile::isSearchable($user),
+    'canDeleteAccount' => $canDeleteAccount,
 ]);

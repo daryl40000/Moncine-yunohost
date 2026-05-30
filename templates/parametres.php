@@ -8,6 +8,7 @@
  * @var int $maxPseudoLength
  * @var int $maxVilleLength
  * @var bool $isSearchable
+ * @var bool $canDeleteAccount
  */
 $minLen = Moncine\UtilisateurRepository::MIN_PASSWORD_LENGTH;
 $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
@@ -101,6 +102,39 @@ $maxLen = Moncine\UtilisateurRepository::MAX_PASSWORD_LENGTH;
             </form>
         </div>
     </details>
+
+    <?php if ($canDeleteAccount): ?>
+    <details class="catalog-admin-panel account-page__danger-zone">
+        <summary class="catalog-admin-panel__summary">Supprimer mon compte</summary>
+        <div class="catalog-admin-panel__body">
+            <p class="hint">
+                Cette action est définitive : votre compte, vos envies personnelles et votre historique de vision
+                seront supprimés. Les films du groupe famille partagé ne sont pas supprimés pour les autres membres.
+            </p>
+            <form method="post" action="/parametres.php" class="import-form auth-form account-form"
+                  onsubmit="return confirm('Supprimer définitivement votre compte ? Cette action est irréversible.');">
+                <?php require MONCINE_ROOT . '/templates/_csrf_field.php'; ?>
+                <input type="hidden" name="action" value="delete_account">
+
+                <label for="delete_current_password">Mot de passe actuel (confirmation)</label>
+                <input type="password" name="current_password" id="delete_current_password" required
+                       autocomplete="current-password" maxlength="<?= $maxLen ?>">
+
+                <button type="submit" class="btn btn-danger">Supprimer mon compte</button>
+            </form>
+        </div>
+    </details>
+    <?php else: ?>
+    <details class="catalog-admin-panel">
+        <summary class="catalog-admin-panel__summary">Supprimer mon compte</summary>
+        <div class="catalog-admin-panel__body">
+            <p class="hint">
+                Les comptes administrateur ne peuvent pas être supprimés depuis cette page.
+                Un autre administrateur peut gérer les comptes dans la section administration si nécessaire.
+            </p>
+        </div>
+    </details>
+    <?php endif; ?>
 
     <details class="catalog-admin-panel">
         <summary class="catalog-admin-panel__summary">Partage visiteur</summary>

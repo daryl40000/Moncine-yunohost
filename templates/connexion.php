@@ -5,6 +5,7 @@
 /** @var bool $flashRegistered */
 /** @var bool $flashConfirmed */
 /** @var bool $flashPendingAdmin */
+/** @var bool $flashAccountDeleted */
 ?>
 <section class="auth-page">
     <h1>Connexion</h1>
@@ -23,6 +24,9 @@
         <p class="alert alert-success">
             Votre e-mail est confirmé. Un administrateur doit encore valider votre compte.
         </p>
+    <?php endif; ?>
+    <?php if ($flashAccountDeleted): ?>
+        <p class="alert alert-success">Votre compte a été supprimé.</p>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
         <p class="alert alert-warning"><?= Moncine\View::escape($error) ?></p>

@@ -352,10 +352,7 @@ final class UtilisateurRepository
 
         $this->db->beginTransaction();
         try {
-            $this->db->prepare('DELETE FROM historique WHERE user_id = ?')->execute([$id]);
-            $this->db->prepare(
-                'DELETE FROM bibliotheque WHERE user_id = ? AND statut = ?'
-            )->execute([$id, LibraryStatut::WISHLIST]);
+            $this->prepareUserDeletion($id);
             $stmt = $this->db->prepare('DELETE FROM utilisateurs WHERE id = ?');
             $stmt->execute([$id]);
             if ($stmt->rowCount() < 1) {
@@ -372,6 +369,131 @@ final class UtilisateurRepository
         }
 
         return true;
+    }
+
+    /**
+     * Suppression du compte par l’utilisateur connecté (mot de passe requis).
+     * Les comptes administrateur ne peuvent pas être supprimés ainsi.
+     *
+     * @return true|string
+     */
+    public function deleteOwnAccount(int $userId, string $currentPassword): bool|string
+    {
+        if ($userId <= 0) {
+            return 'Compte invalide.';
+        }
+
+        $user = $this->findByIdForAuthentication($userId);
+        if ($user === null) {
+            return 'Compte introuvable.';
+        }
+
+        if (UserRole::isAdmin((string) ($user['role'] ?? ''))) {
+            return 'Les comptes administrateur ne peuvent pas être supprimés depuis cette page. Demandez à un autre administrateur si besoin.';
+        }
+
+        if (!self::verifyPassword($user, $currentPassword)) {
+            return 'Mot de passe incorrect.';
+        }
+
+        return $this->delete($userId);
+    }
+
+    /**
+     * Nettoie les données liées avant DELETE utilisateurs (contraintes FK SQLite).
+     */
+    private function prepareUserDeletion(int $userId): void
+    {
+        $user = $this->findById($userId);
+        if ($user === null) {
+            return;
+        }
+
+        if ($this->tableExists('catalog_admin_audit')) {
+            $this->db->prepare('DELETE FROM catalog_admin_audit WHERE user_id = ?')->execute([$userId]);
+        }
+
+        $this->db->prepare('DELETE FROM historique WHERE user_id = ?')->execute([$userId]);
+        $this->reassignOrRemoveUserBibliotheque($userId);
+
+        $email = mb_strtolower(trim((string) ($user['email'] ?? '')), 'UTF-8');
+        if ($email !== '' && $this->tableExists('inscription_requests')) {
+            $this->db->prepare(
+                'DELETE FROM inscription_requests WHERE LOWER(TRIM(email)) = ?'
+            )->execute([$email]);
+        }
+
+        if ($this->tableExists('group_members')) {
+            $this->db->prepare('UPDATE group_members SET invited_by = NULL WHERE invited_by = ?')
+                ->execute([$userId]);
+        }
+
+        if ($this->tableExists('foyers')) {
+            $this->db->prepare('UPDATE foyers SET created_by_user_id = NULL WHERE created_by_user_id = ?')
+                ->execute([$userId]);
+        }
+
+        $this->db->prepare(
+            'DELETE FROM historique WHERE film_id IN (SELECT id FROM bibliotheque WHERE user_id = ?)'
+        )->execute([$userId]);
+        $this->db->prepare('DELETE FROM bibliotheque WHERE user_id = ?')->execute([$userId]);
+    }
+
+    private function reassignOrRemoveUserBibliotheque(int $userId): void
+    {
+        $stmt = $this->db->prepare('SELECT id, foyer_id, statut FROM bibliotheque WHERE user_id = ?');
+        $stmt->execute([$userId]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $bibId = (int) ($row['id'] ?? 0);
+            if ($bibId <= 0) {
+                continue;
+            }
+
+            $statut = (string) ($row['statut'] ?? '');
+            $foyerId = (int) ($row['foyer_id'] ?? 0);
+
+            if ($statut === LibraryStatut::COLLECTION && $foyerId > 0) {
+                $successorId = $this->findGroupSuccessorUserId($foyerId, $userId);
+                if ($successorId > 0) {
+                    $this->db->prepare('UPDATE bibliotheque SET user_id = ? WHERE id = ?')
+                        ->execute([$successorId, $bibId]);
+
+                    continue;
+                }
+            }
+
+            $this->db->prepare('DELETE FROM historique WHERE film_id = ?')->execute([$bibId]);
+            $this->db->prepare('DELETE FROM bibliotheque WHERE id = ?')->execute([$bibId]);
+        }
+    }
+
+    private function findGroupSuccessorUserId(int $foyerId, int $excludeUserId): int
+    {
+        if ($foyerId <= 0 || !$this->tableExists('group_members')) {
+            return 0;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT user_id FROM group_members
+             WHERE foyer_id = ? AND user_id != ?
+             ORDER BY CASE role WHEN 'founder' THEN 0 ELSE 1 END, user_id ASC
+             LIMIT 1"
+        );
+        $stmt->execute([$foyerId, $excludeUserId]);
+        $value = $stmt->fetchColumn();
+
+        return $value !== false ? (int) $value : 0;
+    }
+
+    private function tableExists(string $tableName): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
+        );
+        $stmt->execute([$tableName]);
+
+        return $stmt->fetchColumn() !== false;
     }
 
     public static function hashPassword(string $plain): ?string

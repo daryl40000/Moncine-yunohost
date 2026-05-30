@@ -7,6 +7,111 @@ Les numéros suivent le [versionnement sémantique](https://semver.org/lang/fr/)
 
 ---
 
+## [0.9.5] — 2026-05-30
+
+### Ajouté
+
+- **Mon compte** (`/parametres.php`) : section **Supprimer mon compte** (mot de passe requis, confirmation) ; message informatif pour les **administrateurs** (suppression impossible depuis cette page).
+
+### Corrigé
+
+- **Suppression de compte** : nettoyage complet avant suppression (`prepareUserDeletion`) — journal admin, bibliothèque (réattribution des films de collection partagée à un autre membre du groupe), demandes d’inscription, références groupe/foyer ; corrige l’erreur « Suppression impossible » due aux contraintes SQLite.
+- **Mot de passe oublié** : erreurs SQL à la création du jeton gérées sans erreur fatale (`PasswordResetRepository`).
+
+### Tests
+
+- `tests/Integration/AccountDeleteTest.php` — suppression utilisateur, refus admin, mot de passe, foyer partagé.
+
+Documentation : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md).
+
+## [0.9.4] — 2026-05-30
+
+Correctifs suite à l’inscription publique (v0.9.3).
+
+### Corrigé
+
+- **Inscription (HTTP 500)** : `LockoutThrottleStore` — les closures `static` n’utilisaient plus `$this` (limiteur de tentatives à l’envoi du formulaire).
+- **Inscription** : erreurs SQLite à l’insertion (`inscription_requests`) affichées ou traitées comme succès neutre (doublon e-mail) au lieu d’une page blanche.
+- **Page inscription** : vérification `RegistrationService::isAvailable()` ; contrôle `isAvailable()` aligné avec la page de confirmation.
+- **Mot de passe oublié** : gestion d’erreur à l’insertion des jetons de reset.
+
+## [0.9.3] — 2026-05-28
+
+### Ajouté
+
+- **Inscription publique** : réglage admin (désactivée / ouverte / avec approbation), confirmation par e-mail, une demande active par adresse, page `/demandes-inscription.php` — [doc/inscription-utilisateurs.md](doc/inscription-utilisateurs.md) (migration `027`).
+
+### Sécurité
+
+- **Confirmation d’inscription** : le lien e-mail n’active plus le compte en GET ; l’utilisateur doit cliquer sur un bouton (POST + CSRF) pour éviter les confirmations automatiques par les scanners de messagerie.
+- **Connexion / inscription / mot de passe oublié** : limitation de débit **session + IP** (`LockoutThrottleStore`, fichiers sous `data/auth_rate_limit/`) — impossible de contourner en supprimant le cookie de session.
+- **Inscription** : suppression du `password_hash` dans `inscription_requests` après approbation ou refus (migration `028`).
+
+## [0.9.2] — 2026-05-28
+
+Renforcement **sécurité et robustesse** (revue qualité).
+
+### Sécurité
+
+- **Chemins médias (admin)** : `MediaPathConfig::validateRootPath()` — chemin absolu, dossier lisible/inscriptible, interdiction de préfixes système (`/etc`, `/proc`, …).
+- **Fichiers stockés** : `StoredObjectDelivery` — types MIME sûrs en affichage inline (PDF, images, texte) ; autres types en téléchargement.
+- **Content-Disposition** : `HttpContentDisposition` (nom ASCII + UTF-8 RFC 5987) pour `/media-object.php`.
+
+### Amélioré
+
+- **Listes imprimables** : limite de **500 lignes** + message si la liste est tronquée.
+
+## [0.9.1] — 2026-05-28
+
+Alternative légère à la **phase 10** (export PDF serveur reporté pour YunoHost).
+
+### Ajouté
+
+- **Listes imprimables** : `/imprimer-films.php`, `/imprimer-envies.php` — même filtres et tri que Mes films / Mes envies ; bouton **Version imprimable** sur ces pages.
+- **Impression navigateur** : « Enregistrer en PDF » via la boîte de dialogue du navigateur (aucune librairie PHP PDF).
+
+### Corrigé
+
+- **Bouton d’impression** : script externe `www/assets/js/print-page.js` (la politique CSP `script-src 'self'` bloquait les `onclick` inline).
+
+### Amélioré (maintenance)
+
+- **Listes imprimables** : logique centralisée dans `PrintListService` ; layout print avec scope isolé (`View::renderPrintLayout`).
+- **MediaStorageService** : suppression fichier + métadonnées plus robuste (fichier déjà absent).
+
+Documentation : [doc/listes-imprimables.md](doc/listes-imprimables.md).
+
+## [0.9.0] — 2026-05-28
+
+Phase **9** — stockage de fichiers volumineux hors `www/`. Amélioration de l’usage du **questionnaire du soir**.
+
+### Ajouté
+
+- **Racine médias** : variable `MONCINE_MEDIA_PATH` (défaut `data/media/`) + surcharge admin en base.
+- **Sous-dossiers** : `objects/`, `magazines/`, `books/`, `exports/`, `tmp/` créés automatiquement.
+- **ObjectStorage** : interface + backend filesystem local ; table `stored_objects` (migration `019`).
+- **Admin** : page `/maintenance-medias.php` (config racine, création dossiers, test lecture/écriture).
+- **Lecture sécurisée** : `/media-object.php?id=…` (admin, streaming PHP — pas d’URL publique directe).
+
+### Amélioré
+
+- **Questionnaire du soir** (`/resultat.php`) : barre d’actions en haut de chaque proposition (boutons de note **Non**, **Bof**, **Pourquoi pas**, etc. + **Autre tirage** + lien vers les mieux notés) ; suppression du texte récapitulatif des critères en tête de page. Voir [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md).
+
+## [0.8.9] — 2026-05-27
+
+Phase **8** (prêts entre amis) + correctifs installation locale.
+
+### Ajouté
+
+- **Prêts** : demandes de prêt entre amis, acceptation (réservation), validation du prêt et retour — page `/mes-prets.php`.
+- **Profil public** : sur la liste « Films de … », bouton **Demander un prêt**, affichage des statuts (déjà prêté / réservé / demande envoyée) et annulation de demande.
+- **Notifications** : notifications in-app (et e-mail si activé) sur demande/acceptation/refus/validation/retour.
+
+### Corrigé
+
+- **Installation / création du premier compte** : correction des transactions imbriquées lors de la création du groupe famille.
+- **Sessions PHP en local** : bascule vers `data/sessions` quand le répertoire système des sessions n’est pas accessible.
+
 ## [0.8.8] — 2026-05-19
 
 Phase **7 bis** (suite cibles d’achat sur les envies), hors comparateur de prix.
