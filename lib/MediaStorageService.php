@@ -65,17 +65,28 @@ final class MediaStorageService
         return $this->storage->readStream($relativePath);
     }
 
+    /**
+     * Supprime le fichier et la ligne stored_objects associée.
+     * Si le fichier est déjà absent, la métadonnée est quand même nettoyée.
+     */
     public function deleteByRelativePath(string $relativePath): bool
     {
-        $row = $this->repo->findByRelativePath($relativePath);
-        if ($this->storage->delete($relativePath)) {
-            if ($row !== null) {
-                $this->repo->deleteById((int) $row['id']);
-            }
-
-            return true;
+        if ($relativePath === '' || str_contains($relativePath, '..')) {
+            return false;
         }
 
-        return false;
+        $row = StoredObjectRepository::tableExists()
+            ? $this->repo->findByRelativePath($relativePath)
+            : null;
+
+        if ($this->storage->exists($relativePath) && !$this->storage->delete($relativePath)) {
+            return false;
+        }
+
+        if ($row !== null) {
+            $this->repo->deleteById((int) $row['id']);
+        }
+
+        return true;
     }
 }

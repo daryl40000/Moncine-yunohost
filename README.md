@@ -1,6 +1,6 @@
 # Moncine
 
-**Version : 0.9.0**
+**Version : 0.9.2**
 
 **Auteur :** Stéphane MATER  
 **Licence :** [GNU General Public License v3.0 ou ultérieure](LICENSE) (GPL-3.0-or-later)
@@ -13,7 +13,7 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 
 | Domaine | Disponible |
 |---------|------------|
-| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), **questionnaire du soir** (tirage + notes en session) |
+| Collection & envies | Mes films, Mes envies, sagas, statistiques (dont temps de vision cumulé), **questionnaire du soir**, **listes imprimables** (PDF via le navigateur) |
 | Prêts | Demandes entre amis, réservation, validation et retour (`/mes-prets.php`) |
 | Stockage médias | Fichiers volumineux hors `www/` (`MONCINE_MEDIA_PATH`, admin **Gestion → Médias**) |
 | Foyers & famille | Collection partagée par foyer ; envies et historique personnels |
@@ -49,7 +49,8 @@ Application web pour gérer une **dvdthèque personnelle** : films, envies, note
 - ~~Suite cibles d’achat (partage visiteur + « J’ai acheté » avec choix de version)~~ (v0.8.8) — comparateur de prix reporté
 - ~~Prêts entre utilisateurs (phase 8)~~ (v0.8.9)
 - ~~Stockage fichiers (racine `MONCINE_MEDIA_PATH`, hors www)~~ (v0.9.0)
-- Export PDF
+- ~~Listes imprimables Mes films / Mes envies~~ (v0.9.1) — alternative à l’export PDF serveur
+- Export PDF serveur (phase 10, optionnel plus tard)
 - Mes BD
 - Collections de magazines
 - Magazines PDF & lecteur intégré
@@ -72,9 +73,10 @@ Détail : [ROADMAP.md](ROADMAP.md). Historique des versions : [CHANGELOG.md](CHA
 | `www/partage.php` | Liste partagée visiteur (lecture seule, sans compte) |
 | `www/gerer-partages.php` | Création / révocation des liens de partage |
 | `www/quiz.php` / `www/resultat.php` | Questionnaire du soir et proposition de film |
+| `www/imprimer-films.php` / `www/imprimer-envies.php` | Listes imprimables (Mes films / Mes envies) |
 | `templates/*.php` | HTML affiché (via `View::render`) |
 
-Questionnaire du soir : [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md).
+Documentation : [questionnaire du soir](doc/questionnaire-du-soir.md) · [listes imprimables](doc/listes-imprimables.md).
 
 ---
 
@@ -136,6 +138,7 @@ Les membres d’un même foyer voient la **même collection** ; chacun garde **s
 
 - Documentation mots de passe : [doc/comptes-mot-de-passe.md](doc/comptes-mot-de-passe.md)
 - Documentation questionnaire : [doc/questionnaire-du-soir.md](doc/questionnaire-du-soir.md)
+- Listes imprimables : [doc/listes-imprimables.md](doc/listes-imprimables.md)
 
 ---
 
@@ -161,6 +164,7 @@ Les fichiers dans `sql/migrations_legacy/` ne sont **pas** appliqués (historiqu
 | **v0.8.8** | Phase 7 bis : partage visiteur des cibles d’achat, « J’ai acheté » avec choix de version, EAN chiffres seuls (`025`) |
 | **v0.8.9** | Prêts entre amis (`018`, `026`) |
 | **v0.9.0** | Stockage médias local (`019_stored_objects`), page `/maintenance-medias.php` ; UX proposition questionnaire (`/resultat.php`) |
+| **v0.9.1** | Listes imprimables `/imprimer-films.php`, `/imprimer-envies.php` (aucune migration SQL) |
 
 ---
 
@@ -178,5 +182,6 @@ composer test
 
 - **Export** : page `/export.php` (CSV collection, envies, historique)
 - **Import** : page `/import.php` (bibliothèque ou catalogue admin)
+- **Impression** : bouton **Version imprimable** sur Mes films et Mes envies → PDF via le navigateur ([doc/listes-imprimables.md](doc/listes-imprimables.md))
 
 Les affiches locales sont stockées dans `data/posters/` (ou le dossier défini par `MONCINE_DATA_PATH`).

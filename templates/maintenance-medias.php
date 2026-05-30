@@ -59,6 +59,7 @@
                 Sur YunoHost, un dossier partagé type
                 <code>/home/yunohost.multimedia/share/moncine</code> convient souvent.
                 L’utilisateur du serveur web doit pouvoir lire et écrire ce dossier.
+                Le chemin doit être <strong>absolu</strong> ; les dossiers système (<code>/etc</code>, etc.) sont refusés.
             </p>
             <div class="form-actions">
                 <button type="submit" class="btn">Enregistrer la racine</button>

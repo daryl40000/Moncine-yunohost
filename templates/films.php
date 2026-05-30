@@ -46,6 +46,10 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
     <div class="collection-page__head">
         <h1>Mes films</h1>
         <div class="collection-page__head-actions">
+            <?php
+            $printUrl = Moncine\View::filmsPrintUrl($query, $sortBy, $sortDir, $kindFilter);
+            require MONCINE_ROOT . '/templates/_print_button.php';
+            ?>
             <a class="btn btn-secondary" href="/gerer-partages.php?scope=<?= Moncine\ShareLinkScope::COLLECTION ?>">
                 Partager
             </a>

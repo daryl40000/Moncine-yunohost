@@ -10,6 +10,7 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 use Moncine\CatalogAdmin;
 use Moncine\LocalFilesystemObjectStorage;
 use Moncine\MediaStorage;
+use Moncine\StoredObjectDelivery;
 use Moncine\StoredObjectRepository;
 
 CatalogAdmin::denyUnlessAccess();
@@ -37,11 +38,6 @@ if ($absolute === '' || !MediaStorage::isInsideRoot($absolute) || !is_file($abso
     exit;
 }
 
-$mime = trim((string) ($row['mime'] ?? ''));
-if ($mime === '') {
-    $mime = 'application/octet-stream';
-}
-
 $storage = new LocalFilesystemObjectStorage();
 $stream = $storage->readStream($relativePath);
 if ($stream === null) {
@@ -50,11 +46,7 @@ if ($stream === null) {
     exit;
 }
 
-$filename = basename($relativePath);
-header('Content-Type: ' . $mime);
-header('Content-Length: ' . (string) filesize($absolute));
-header('X-Content-Type-Options: nosniff');
-header('Content-Disposition: inline; filename="' . rawurlencode($filename) . '"');
+StoredObjectDelivery::sendFile($row, $absolute);
 
 while (!feof($stream)) {
     $chunk = fread($stream, 65536);

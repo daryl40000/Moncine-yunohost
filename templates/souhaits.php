@@ -39,11 +39,17 @@ $sortHeader = static function (string $label, string $column) use ($sortBy, $sor
 <section class="collection-page wishlist-page">
     <div class="collection-page__head">
         <h1><?= Moncine\View::escape(Moncine\LibraryStatut::label(Moncine\LibraryStatut::WISHLIST)) ?></h1>
-        <?php if (!$isGroupScope): ?>
-            <a class="btn btn-secondary" href="/gerer-partages.php?scope=<?= Moncine\ShareLinkScope::WISHLIST ?>">
-                Partager mes envies
-            </a>
-        <?php endif; ?>
+        <div class="collection-page__head-actions">
+            <?php
+            $printUrl = Moncine\View::wishlistPrintUrl($query, $sortBy, $sortDir, $scope);
+            require MONCINE_ROOT . '/templates/_print_button.php';
+            ?>
+            <?php if (!$isGroupScope): ?>
+                <a class="btn btn-secondary" href="/gerer-partages.php?scope=<?= Moncine\ShareLinkScope::WISHLIST ?>">
+                    Partager mes envies
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <?php if ($canShowGroup): ?>

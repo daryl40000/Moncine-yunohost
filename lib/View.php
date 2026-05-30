@@ -20,9 +20,34 @@ final class View
         if (!isset($data['wideLayout']) && self::templateUsesWideLayout($template)) {
             $data['wideLayout'] = true;
         }
-        $useAuthLayout = array_key_exists('layout', $data) && $data['layout'] === false;
+        $layout = $data['layout'] ?? 'default';
+        if ($layout === 'print') {
+            self::renderPrintLayout($templateFile, $data);
+
+            return;
+        }
+
         extract($data, EXTR_SKIP);
-        require MONCINE_ROOT . '/templates/' . ($useAuthLayout ? 'layout_auth.php' : 'layout.php');
+        $layoutFile = match ($layout) {
+            false, 'auth' => 'layout_auth.php',
+            default => 'layout.php',
+        };
+        require MONCINE_ROOT . '/templates/' . $layoutFile;
+    }
+
+    /**
+     * Layout impression : variables de contenu isolées du layout (évite la pollution de scope).
+     *
+     * @param array<string, mixed> $data
+     */
+    private static function renderPrintLayout(string $templateFile, array $data): void
+    {
+        $pageTitle = (string) ($data['pageTitle'] ?? MONCINE_APP_NAME);
+        $backUrl = (string) ($data['backUrl'] ?? '');
+        $contentData = $data;
+        unset($contentData['layout'], $contentData['pageTitle'], $contentData['backUrl'], $contentData['wideLayout']);
+
+        require MONCINE_ROOT . '/templates/layout_print.php';
     }
 
     /** Pages avec tableaux larges (collection, listes…). */
@@ -217,6 +242,57 @@ final class View
         }
 
         return $params === [] ? '/films.php' : '/films.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Version imprimable de la collection (mêmes filtres / tri que Mes films). */
+    public static function filmsPrintUrl(
+        string $searchQuery = '',
+        string $sortBy = 'titre',
+        string $sortDir = 'asc',
+        string $kindFilter = ''
+    ): string {
+        $params = [];
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery !== '') {
+            $params['q'] = $searchQuery;
+        }
+        if ($sortBy !== '' && $sortBy !== 'titre') {
+            $params['sort'] = $sortBy;
+        }
+        if (strtolower($sortDir) === 'desc') {
+            $params['dir'] = 'desc';
+        }
+        $kindFilter = ContentKindFilter::normalize($kindFilter);
+        if ($kindFilter !== ContentKindFilter::ALL) {
+            $params['kind'] = $kindFilter;
+        }
+
+        return $params === [] ? '/imprimer-films.php' : '/imprimer-films.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Version imprimable des envies (Mes envies ou envies du groupe). */
+    public static function wishlistPrintUrl(
+        string $searchQuery = '',
+        string $sortBy = 'titre',
+        string $sortDir = 'asc',
+        string $scope = WishlistScope::MINE
+    ): string {
+        $params = [];
+        $searchQuery = trim($searchQuery);
+        if ($searchQuery !== '') {
+            $params['q'] = $searchQuery;
+        }
+        if (WishlistScope::normalize($scope) === WishlistScope::GROUP) {
+            $params['scope'] = WishlistScope::GROUP;
+        }
+        if ($sortBy !== '' && $sortBy !== 'titre') {
+            $params['sort'] = $sortBy;
+        }
+        if (strtolower($sortDir) === 'desc') {
+            $params['dir'] = 'desc';
+        }
+
+        return $params === [] ? '/imprimer-envies.php' : '/imprimer-envies.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
     }
 
     /** Page de choix ou formulaire d’ajout de film. */

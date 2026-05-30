@@ -23,7 +23,7 @@ Fonctionnalités métier visées :
 4. ~~**Partage visiteur**~~ — **livré v0.8.0** : lien URL en **lecture seule** vers **Mes films** et **Mes envies** (fiche film consultable, aucune modification)
 5. **Prêts** : savoir quoi a été prêté, à qui, quand, et le retour
 6. **Stockage de fichiers** volumineux (PDF magazines, etc.) : dossier partagé type YunoHost avec **racine unique** configurable (`MONCINE_MEDIA_PATH`) et sous-dossiers gérés par Moncine
-7. **Export PDF** de la bibliothèque / des envies
+7. ~~**Export / impression listes**~~ — **livré v0.9.1** : pages imprimables Mes films / Mes envies (PDF via le navigateur) ; export PDF **serveur** (phase 10) reporté
 8. Page **Mes BD** (collection + wishlist)
 9. ~~**Soumissions** au catalogue~~ — **livré v0.7.4** (propositions, validation admin, notifications)
 10. ~~**EAN multiples par œuvre** (catalogue)~~ — **livré v0.8.0** : un code-barres par édition / support (DVD, Blu-ray, 4K…) — socle pour **recherche d’achat** ultérieure
@@ -37,9 +37,9 @@ Fonctionnalités métier visées :
 
 ## État actuel
 
-**Version applicative : 0.8.8**
+**Version applicative : 0.9.1**
 
-Application PHP + SQLite, déployable en local ou sur un serveur web classique.
+Application PHP + SQLite, déployable en local ou sur un serveur web classique (YunoHost : sans dépendance PDF serveur).
 
 ### Déjà en place
 
@@ -68,12 +68,16 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | **UX accueil & partage (v0.8.6)** | Vignettes accueil, bouton profil, partage lien e-mail / Bluesky |
 | **Recherche personnes catalogue (v0.8.7)** | `/personnes.php` sur tout le catalogue, statut collection / envies |
 | **Suite cibles d’achat (v0.8.8)** | Partage visiteur des versions recherchées ; « J’ai acheté » ; EAN normalisés ; UX liste envies compacte |
-| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `016`, `017`, `023`, `024`, `025` |
-| **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications) |
+| **Prêts (v0.8.9)** | Demandes entre amis, réservation, validation, retour — `/mes-prets.php` |
+| **Stockage médias (v0.9.0)** | `MONCINE_MEDIA_PATH`, `stored_objects`, `/maintenance-medias.php` |
+| **Questionnaire du soir (v0.9.0)** | UX proposition `/resultat.php` (notes + Autre tirage en haut) |
+| **Listes imprimables (v0.9.1)** | `/imprimer-films.php`, `/imprimer-envies.php`, `print-page.js` — [doc/listes-imprimables.md](doc/listes-imprimables.md) |
+| **Migrations SQL** | `SchemaMigrator`, CLI `php lib/cli/migrate.php`, migrations `001` → `019`, `023`–`026` |
+| **Tests** | PHPUnit (import, catalogue, foyers, soumissions, notifications, stockage médias) |
 
 ### Point d’étape — mai 2026
 
-**Version actuelle : 0.8.8.** Partage visiteur des versions recherchées et « J’ai acheté » avec choix de version. **Comparateur de prix (7 bis.2) reporté.** Prochaine évolution majeure : **phase 8** (prêts).
+**Version actuelle : 0.9.1.** Stockage fichiers hors `www/`, prêts entre amis, listes **imprimables** (alternative phase 10 sans Dompdf). **Export PDF serveur (phase 10)** et **comparateur de prix (7 bis.2)** reportés. Prochaine évolution majeure suggérée : **phase 11** (Mes BD).
 
 | Version | Contenu principal |
 |---------|-------------------|
@@ -94,6 +98,9 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | 0.8.6 | Accueil vignettes, profil en un clic, partage lien e-mail / Bluesky |
 | 0.8.7 | Recherche personnes sur le catalogue + badges bibliothèque |
 | 0.8.8 | Phase 7 bis : partage visiteur cibles, « J’ai acheté » (liste déroulante), EAN chiffres seuls (`025`) |
+| 0.8.9 | Prêts entre amis (`018`, `026`) |
+| 0.9.0 | Stockage médias (`019`), maintenance médias, UX questionnaire |
+| 0.9.1 | Listes imprimables Mes films / Mes envies (aucune migration SQL) |
 
 ### Prochaines étapes
 
@@ -111,7 +118,7 @@ Application PHP + SQLite, déployable en local ou sur un serveur web classique.
 | Phase 7 bis — Suite cibles d’achat (envies) | **Partielle** (sans comparateur prix) |
 | Phase 8 — Prêts entre utilisateurs | ✅ Livré (v0.8.9) |
 | Phase 9 — Stockage fichiers (local) | **Livré v0.9.0** |
-| Phase 10 — Export PDF | À faire |
+| Phase 10 — Export PDF serveur | Reportée — **alternative livrée** : listes imprimables **v0.9.1** |
 | Phase 11 — Mes BD | À faire |
 | Phase 12 — Collections de magazines | À faire |
 | Phase 13 — Magazines PDF & lecteur | À faire |
@@ -759,9 +766,22 @@ On configure une **racine unique** `MONCINE_MEDIA_PATH`, puis Moncine crée et u
 
 ---
 
-## Phase 10 — Export PDF
+## Phase 10 — Export PDF serveur — **reportée** (alternative **livrée v0.9.1**)
 
-**Objectif :** permettre d’**exporter en PDF** la bibliothèque et la wishlist depuis **Mes films** et **Mes envies** (utilisateur connecté).
+### Alternative livrée (v0.9.1) — listes imprimables ✅
+
+| # | Tâche | Statut |
+|---|--------|--------|
+| 10 alt.1 | Bouton **Version imprimable** sur Mes films et Mes envies | ✅ |
+| 10 alt.2 | Pages `/imprimer-films.php`, `/imprimer-envies.php` (filtres / tri identiques) | ✅ |
+| 10 alt.3 | Mise en page impression (`print.css`) + PDF via navigateur | ✅ |
+| 10 alt.4 | Script `print-page.js` (compatible CSP, pas d’`onclick` inline) | ✅ |
+
+**Critère couvert :** l’utilisateur obtient une liste imprimable ou un PDF **sans dépendance PHP** (compatible YunoHost). Doc : [doc/listes-imprimables.md](doc/listes-imprimables.md).
+
+### Export PDF côté serveur (non livré — optionnel)
+
+**Objectif initial (si besoin plus tard) :** téléchargement direct d’un fichier PDF généré par Moncine (Dompdf / mPDF — dépendances Composer et extensions PHP).
 
 **Dépend de :** phases 2, 4 et **7** (mêmes périmètres de données que le partage visiteur).
 
@@ -915,7 +935,7 @@ Fonctionnalité transversale déjà partiellement en place :
 | Partage visiteur | Jeton hashé, scope collection\|wishlist, pages GET lecture seule (phase 7) |
 | Prêts | Table `loans` liée à `bibliotheque` (phase 8) |
 | Stockage fichiers | `MONCINE_MEDIA_PATH` (local, racine unique) (phase 9) |
-| Export PDF | PDF généré côté serveur (phase 10) |
+| Export / impression listes | Listes imprimables v0.9.1 ; PDF serveur optionnel (phase 10) |
 | Magazines | Collections + numéros (phase 12) ; PDF via ObjectStorage (phase 13) |
 | Chemins données | `MONCINE_DATA_PATH` (SQLite, clés) ; `MONCINE_MEDIA_PATH` (objets, affiches) |
 

@@ -48,9 +48,11 @@ final class MediaPathConfig
     }
 
     /**
+     * Vérifie qu’un chemin absolu convient comme racine médias.
+     *
      * @return true|string
      */
-    public static function saveRootPath(string $path): bool|string
+    public static function validateRootPath(string $path): bool|string
     {
         $path = rtrim(trim($path), '/\\');
         if ($path === '') {
@@ -59,9 +61,60 @@ final class MediaPathConfig
         if (str_contains($path, '..')) {
             return 'Chemin invalide.';
         }
+        if (!str_starts_with($path, '/')) {
+            return 'Le chemin doit être absolu (commencer par /).';
+        }
+
+        $resolved = realpath($path);
+        if ($resolved === false) {
+            if (!is_dir($path) && !@mkdir($path, 0750, true)) {
+                return 'Le dossier n’existe pas et le serveur ne peut pas le créer.';
+            }
+            $resolved = realpath($path);
+        }
+        if ($resolved === false || !is_dir($resolved)) {
+            return 'Le chemin doit pointer vers un dossier existant.';
+        }
+
+        if (!is_readable($resolved) || !is_writable($resolved)) {
+            return 'Le dossier doit être lisible et inscriptible par le serveur web.';
+        }
+
+        $blockedPrefixes = [
+            '/etc',
+            '/proc',
+            '/sys',
+            '/dev',
+            '/root',
+            '/boot',
+            '/run',
+        ];
+        foreach ($blockedPrefixes as $prefix) {
+            if ($resolved === $prefix || str_starts_with($resolved, $prefix . '/')) {
+                return 'Ce chemin système n’est pas autorisé pour les médias.';
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return true|string
+     */
+    public static function saveRootPath(string $path): bool|string
+    {
+        $check = self::validateRootPath($path);
+        if ($check !== true) {
+            return $check;
+        }
+
+        $resolved = realpath(rtrim(trim($path), '/\\'));
+        if ($resolved === false) {
+            return 'Impossible de résoudre le chemin.';
+        }
 
         $migrator = new SchemaMigrator(Database::getInstance());
-        $migrator->setMetadata(self::META_ROOT_PATH, $path);
+        $migrator->setMetadata(self::META_ROOT_PATH, $resolved);
         self::forgetCachedRoot();
 
         return true;
